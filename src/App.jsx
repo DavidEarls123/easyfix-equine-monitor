@@ -12,11 +12,16 @@ import AnimalProfile from "./screens/AnimalProfile";
 import Video from "./screens/Video";
 import Notifications from "./screens/Notifications";
 import Settings from "./screens/Settings";
+import Staff from "./screens/Staff";
+import Rides from "./screens/Rides";
+import Board from "./screens/Board";
 
 const NAV = [
   { at: "dashboard", label: "Dashboard", icon: "dashboard" },
   { at: "barns", label: "Barns", icon: "barn", sub: true, parent: "yard" },
   { at: "animals", label: "Animals", icon: "horse", sub: true, parent: "yard" },
+  { at: "staff", label: "Staff", icon: "id", sub: true, parent: "people" },
+  { at: "rides", label: "Ride planning", icon: "horse", sub: true, parent: "people" },
   { at: "video", label: "Video", icon: "video" },
   { at: "alerts", label: "Notifications", icon: "bell" },
   { at: "settings", label: "Settings", icon: "settings" },
@@ -38,6 +43,12 @@ export default function App() {
         return <Animals snap={snap} />;
       case "animal":
         return <AnimalProfile id={route.id} />;
+      case "staff":
+        return <Staff />;
+      case "rides":
+        return <Rides />;
+      case "board":
+        return <Board />;
       case "video":
         return <Video stallId={route.id} snap={snap} />;
       case "alerts":
@@ -52,7 +63,8 @@ export default function App() {
   const on = (item) =>
     route.at === item.at ||
     (item.at === "barns" && route.at === "barn") ||
-    (item.at === "animals" && route.at === "animal");
+    (item.at === "animals" && route.at === "animal") ||
+    (item.at === "rides" && route.at === "board");
 
   return (
     <div className="shell">
@@ -65,8 +77,8 @@ export default function App() {
             <div key={item.at}>
               {item.parent && (i === 0 || NAV[i - 1].parent !== item.parent) && (
                 <div className="rail-item" style={{ opacity: 0.75, cursor: "default" }}>
-                  <Icon name="yard" size={18} />
-                  <span className="lbl">{world.yards[0]?.name || "Yard"}</span>
+                  <Icon name={item.parent === "people" ? "id" : "yard"} size={18} />
+                  <span className="lbl">{item.parent === "people" ? "People" : world.yards[0]?.name || "Yard"}</span>
                 </div>
               )}
               <button className={`rail-item ${item.sub ? "sub" : ""} ${on(item) ? "on" : ""}`} onClick={() => go(item.at)}>

@@ -8,6 +8,8 @@
 
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { VERSION, seedWorld, syncStalls, uid } from "./world";
+import { emptyPlan } from "./staff";
+import { dayKey } from "./sim";
 
 const KEY = "easyfix.equine.world";
 const Ctx = createContext(null);
@@ -88,6 +90,123 @@ export function WorldProvider({ children }) {
           return w;
         });
         say("Profile removed");
+      },
+
+      /* --------------------------------- staff ------------------------------- */
+      addStaff(person) {
+        const p = { id: uid("sf_"), groups: [], riding: true, ...person };
+        edit((w) => {
+          w.staff = [...(w.staff || []), p];
+          return w;
+        });
+        say(`${p.name} added`);
+        return p;
+      },
+      updateStaff(id, patch) {
+        edit((w) => {
+          w.staff = (w.staff || []).map((p) => (p.id === id ? { ...p, ...patch } : p));
+          return w;
+        });
+      },
+      removeStaff(id) {
+        edit((w) => {
+          w.staff = (w.staff || []).filter((p) => p.id !== id);
+          // and out of any morning they were down to ride
+          w.ridePlan = Object.fromEntries(
+            Object.entries(w.ridePlan || {}).map(([k, plan]) => [
+              k,
+              { ...plan, lots: plan.lots.map((l) => ({ ...l, rides: l.rides.filter((r) => r.riderId !== id) })) },
+            ])
+          );
+          return w;
+        });
+        say("Removed");
+      },
+
+      /* ------------------------------ ride planning -------------------------- */
+
+      /** Put a horse under a rider in a lot. A horse rides once a morning. */
+      assignRide(when, lotId, riderId, animalId) {
+        const key = dayKey(when);
+        edit((w) => {
+          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          const lots = plan.lots.map((lot) => {
+            let rides = lot.rides;
+            // a horse cannot be in two places at once, so lift it out of wherever
+            // it was before putting it down here
+            if (animalId) rides = rides.filter((r) => r.animalId !== animalId);
+            if (lot.id === lotId) {
+              // one horse per rider per lot: replace rather than stack
+              rides = rides.filter((r) => r.riderId !== riderId);
+              rides = [...rides, { id: uid("rd_"), riderId, animalId }];
+            }
+            return { ...lot, rides };
+          });
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots } };
+          return w;
+        });
+      },
+      clearRide(when, lotId, rideId) {
+        const key = dayKey(when);
+        edit((w) => {
+          const plan = w.ridePlan?.[key];
+          if (!plan) return w;
+          w.ridePlan = {
+            ...w.ridePlan,
+            [key]: {
+              ...plan,
+              lots: plan.lots.map((l) => (l.id === lotId ? { ...l, rides: l.rides.filter((r) => r.id !== rideId) } : l)),
+            },
+          };
+          return w;
+        });
+      },
+      setRideNote(when, lotId, rideId, note) {
+        const key = dayKey(when);
+        edit((w) => {
+          const plan = w.ridePlan?.[key];
+          if (!plan) return w;
+          w.ridePlan = {
+            ...w.ridePlan,
+            [key]: {
+              ...plan,
+              lots: plan.lots.map((l) =>
+                l.id === lotId ? { ...l, rides: l.rides.map((r) => (r.id === rideId ? { ...r, note } : r)) } : l
+              ),
+            },
+          };
+          return w;
+        });
+      },
+      setLots(when, lots) {
+        const key = dayKey(when);
+        edit((w) => {
+          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots } };
+          return w;
+        });
+      },
+      clearPlan(when) {
+        const key = dayKey(when);
+        edit((w) => {
+          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots: plan.lots.map((l) => ({ ...l, rides: [] })) } };
+          return w;
+        });
+        say("Morning cleared");
+      },
+
+      /* ------------------------------ notifications -------------------------- */
+
+      /** A broadcast. Recorded rather than actually sent — there is no mail server here. */
+      sendMessage(msg) {
+        const entry = { id: uid("ms_"), at: Date.now(), ...msg };
+        edit((w) => {
+          w.messages = [entry, ...(w.messages || [])].slice(0, 300);
+          return w;
+        });
+        say(`Sent to ${msg.recipients} ${msg.recipients === 1 ? "person" : "people"}`);
+        return entry;
       },
 
       /* --------------------------- feeding and mucking out -------------------- */

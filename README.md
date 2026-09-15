@@ -84,6 +84,45 @@ keep it affordable, in order of how much they matter:
 The four live feeds on the dashboard therefore cost about an eighth of what the
 camera wall already did before any of this, and nothing at all when scrolled past.
 
+## Staff, and what the string is doing tomorrow
+
+Two things a yard runs on that the sensors know nothing about: who works here,
+and who is sitting on what in the morning.
+
+**Staff** profiles are deliberately three fields — name, email, phone. A yard will
+not maintain more than that, and it is everything needed to reach someone. The
+useful part is **groups**: riders, yard staff, vets, farriers, management. Somebody
+can be in as many as they actually work in, and a message goes to *the riders*
+without anyone picking twelve names out of a list. Broadcasts pick an audience, a
+subject, a body and the channels to use, and report how many of the group are
+actually reachable on those channels before anything is sent.
+
+**Ride planning** is the part built against a real constraint. A racing yard sends
+its string out in lots, and at a big yard that is fifty riders against fifty horses,
+seven lots deep — three hundred assignments before breakfast. So the screen is built
+so a manager can do that without losing their place:
+
+- Lots run across the top with a live count in each, and a lot is added in one press.
+- Riders for the chosen lot are cards; each is a drop target.
+- The horse pool holds only horses not yet down for the morning, searchable by name,
+  owner or trainer, and it shrinks as the morning fills.
+- Two ways to assign, because a manager with a mouse and a manager with a touchscreen
+  want different things: **drag** a horse onto a rider, or **tap** a horse to pick it
+  up and tap the rider to put it down. Both end in the same action.
+- A horse can only be in one lot, so putting it down somewhere lifts it out of
+  wherever it was — no manual tidying up after a change of mind.
+- Riders are switched in and out of the morning in one panel, and somebody who is
+  not riding simply is not on the board.
+
+**The morning message** is built from the plan rather than typed, because a manager
+who has to retype fifty rides will stop sending them. Each rider gets only their own
+rides, previewed before anything goes.
+
+**The yard board** (`screens/Board.jsx`) is the big screen by the tack room. Nobody
+operates it, so there is nothing to press: it opens on the lot that is next up, rolls
+through the rest on its own, and is sized to be read from the other side of the yard —
+rider, horse, silks and box, with who is *not* down to ride along the bottom.
+
 ## The two screens on the wall
 
 The product is not only the web app. There is a panel on the front of every box

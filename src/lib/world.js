@@ -12,8 +12,9 @@ import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
 import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
+import { DEFAULT_LOTS } from "./staff";
 
-export const VERSION = 8;
+export const VERSION = 9;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -47,6 +48,8 @@ export const DEFAULT_SETTINGS = {
   baseline: { ...DEFAULT_BASELINE },
   // default rounds per day; a horse can override its own
   care: { ...DEFAULT_CARE },
+  // the lots the string goes out in; a yard sets its own
+  lots: DEFAULT_LOTS.map((l) => ({ ...l })),
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
 };
 
@@ -202,6 +205,9 @@ export function seedWorld() {
     animals: [],
     alertState: {},
     careLog: [],
+    staff: [],
+    ridePlan: {},
+    messages: [],
     seenNotifications: {},
     log: [],
   };
@@ -262,7 +268,7 @@ export function seedWorld() {
     }
   });
 
-  return seedCare(world);
+  return seedStaff(seedCare(world));
 }
 
 /** Bulk yard for the scale demo: a customer running 300 monitored boxes. */
@@ -359,6 +365,49 @@ function seedCare(world) {
   };
   world.animals.forEach((a) => {
     if (notes[a.name]) a.stallNote = notes[a.name];
+  });
+  return world;
+}
+
+/* ---------------------------------- people --------------------------------- */
+
+const STAFF = `
+Graham Nolan|riders,yard|087 214 6650
+Aoife Brennan|riders,yard|086 771 2019
+Danny Kearns|riders|085 330 4471
+Marta Kowalski|riders,yard|083 908 5512
+Sean Fitzgerald|riders|087 445 8830
+Niamh O'Dwyer|riders|086 220 7743
+Tom Hegarty|riders|085 617 9902
+Ciara Walsh|riders,yard|083 774 3318
+Pawel Nowak|riders,yard|087 991 2264
+Eimear Ryan|riders|086 508 1177
+Liam Costello|riders|085 229 6640
+Katie Moran|riders,yard|083 116 4492
+Joe Brady|yard|087 660 3315
+Sinead Cullen|yard|086 337 8820
+Marek Zielinski|yard|085 774 1163
+Orla Byrne|yard|083 442 9908
+Declan Murphy|management|087 118 2250
+Fiona Keane|management|086 903 7741
+Martin Slattery|farriers|085 550 3327
+Hugh Dalton|vets|087 802 6614
+Rachel Lyons|vets|086 441 9975
+`.trim();
+
+function seedStaff(world) {
+  world.staff = STAFF.split("\n").map((line, i) => {
+    const [name, groups, phone] = line.split("|");
+    const slug = name.toLowerCase().replace(/[^a-z]+/g, ".");
+    return {
+      id: `sf_seed_${i}`,
+      name,
+      email: `${slug}@easyfixracing.ie`,
+      phone,
+      groups: groups.split(","),
+      // most riders are out, one or two are not — a day off, a bad back
+      riding: !groups.includes("riders") ? false : noise(`ride|${name}`) > 0.12,
+    };
   });
   return world;
 }

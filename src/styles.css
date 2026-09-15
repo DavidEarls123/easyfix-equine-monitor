@@ -840,3 +840,124 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   .fob-box-an { font-size: 12px; }
   .fob-cell, .fob-box { min-height: 66px; }
 }
+
+/* --------------------------------- staff ---------------------------------- */
+
+.grp {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em; color: #fff;
+  border-radius: 20px; padding: 2px 8px; white-space: nowrap;
+}
+.grp-pick {
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  border: 1px solid var(--line); background: #fff; color: var(--ink-2);
+  border-radius: 20px; padding: 6px 13px; font-size: 12.5px; font-weight: 700;
+}
+.grp-pick:hover { border-color: var(--blue-300); }
+.grp-pick.on { color: #fff; background: var(--blue); border-color: var(--blue); }
+.grp-pick:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ------------------------------ ride planning ------------------------------ */
+
+.lot-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.lot-tab {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; cursor: pointer;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 9px 15px; min-width: 104px; position: relative;
+}
+.lot-tab:hover { border-color: var(--blue-300); }
+.lot-tab.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.lt-time { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.lt-name { font-size: 11.5px; font-weight: 700; color: var(--ink-2); }
+.lot-tab.on .lt-name { color: rgba(255, 255, 255, 0.85); }
+.lt-count {
+  position: absolute; top: 7px; right: 10px; font-size: 11px; font-weight: 800;
+  background: var(--blue-50); color: var(--blue-600); border-radius: 20px; padding: 1px 7px;
+}
+.lot-tab.on .lt-count { background: rgba(255, 255, 255, 0.22); color: #fff; }
+.lot-tab.add { justify-content: center; align-items: center; border-style: dashed; color: var(--ink-2); }
+
+.held-bar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  background: var(--blue-50); border: 1px solid var(--blue-100); border-radius: 12px;
+  padding: 9px 13px; font-size: 13px; color: var(--ink-2);
+}
+.held-bar .btn { margin-left: auto; }
+
+.rider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(216px, 1fr)); gap: 9px; }
+.rider-card {
+  border: 1px solid var(--line); border-radius: 11px; padding: 8px 10px 9px; background: #fff;
+  display: flex; flex-direction: column; gap: 6px; min-height: 78px;
+}
+.rider-card.filled { border-color: var(--blue-100); background: #fbfdff; }
+.rider-card.target { border-style: dashed; border-color: var(--blue-300); cursor: pointer; }
+.rider-card.target:hover { background: var(--blue-50); }
+.rc-hd { display: flex; align-items: center; gap: 8px; }
+.rc-nm { font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+.rc-lots {
+  margin-left: auto; font-size: 10.5px; font-weight: 800; color: var(--ink-2);
+  background: var(--plane); border-radius: 20px; padding: 1px 7px;
+}
+.rc-horse { display: flex; align-items: center; gap: 8px; }
+.rc-horse b { font-size: 13px; display: block; }
+.rc-slot {
+  border: 1px dashed var(--line); border-radius: 8px; padding: 8px;
+  font-size: 11.5px; color: var(--muted); text-align: center;
+}
+
+.pool { display: grid; gap: 5px; max-height: 560px; overflow-y: auto; padding-right: 3px; }
+.pool-horse {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: grab;
+  background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px;
+}
+.pool-horse:hover { border-color: var(--blue-300); background: #fbfdff; }
+.pool-horse.held { border-color: var(--blue); background: var(--blue-50); }
+.pool-horse b { font-size: 13px; display: block; }
+
+.msg-preview { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.msg-preview pre {
+  margin: 6px 0 0; font-size: 12px; line-height: 1.6; white-space: pre-wrap;
+  font-family: inherit; color: var(--ink-2);
+}
+
+/* ------------------------------- the yard board ---------------------------- */
+
+.board-wrap { display: grid; gap: 12px; }
+.board-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.board {
+  background: linear-gradient(160deg, #081a33, #0d2a52 55%, #071528);
+  border: 3px solid #04101f; border-radius: 14px; color: #fff;
+  padding: 26px 30px 18px; min-height: 620px; display: flex; flex-direction: column;
+}
+.bd-hd { display: flex; align-items: center; gap: 20px; padding-bottom: 16px; border-bottom: 2px solid rgba(255,255,255,0.14); }
+.bd-logo { width: 150px; height: auto; }
+.bd-title h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.bd-title span { font-size: 14px; color: #9cc0ea; }
+.bd-clock { margin-left: auto; font-size: 46px; font-weight: 800; letter-spacing: -0.03em; color: #cfe4ff; }
+
+.bd-lot { display: flex; align-items: baseline; gap: 16px; padding: 18px 0 14px; }
+.bd-lot-time { font-size: 58px; font-weight: 800; letter-spacing: -0.04em; color: #55b0ff; line-height: 1; }
+.bd-lot-name { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.bd-lot-n { font-size: 16px; color: #9cc0ea; }
+.bd-dots { margin-left: auto; display: flex; gap: 7px; }
+.bd-dots span {
+  width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,0.22); cursor: pointer;
+}
+.bd-dots span.on { background: #55b0ff; }
+
+.bd-rows { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 8px 26px; flex: 1; align-content: start; }
+.bd-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 9px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+.bd-pair { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.bd-rider { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.bd-horse { font-size: 16px; color: #8ed0ff; font-weight: 600; }
+.bd-box { font-size: 12px; color: #7e9cc4; white-space: nowrap; }
+
+.bd-empty { flex: 1; display: grid; place-items: center; align-content: center; gap: 6px; color: #7e9cc4; text-align: center; }
+.bd-empty h2 { font-size: 24px; color: #cfe4ff; }
+.bd-ft {
+  display: flex; gap: 20px; padding-top: 14px; margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.14); font-size: 13px; color: #8cb0da; flex-wrap: wrap;
+}
+.bd-idle { margin-left: auto; }
