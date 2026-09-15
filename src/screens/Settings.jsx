@@ -8,6 +8,7 @@ import { WelfareRing } from "../components/Welfare";
 import { COMPONENTS, DEFAULT_WEIGHTS, normalise } from "../lib/score";
 import { DEFAULT_PASSPORT, PROVIDERS, testProvider } from "../lib/passport";
 import { DEFAULT_BASELINE } from "../lib/baseline";
+import { DEFAULT_CARE } from "../lib/care";
 import { useWorld } from "../lib/store";
 import { bigYard } from "../lib/world";
 
@@ -128,6 +129,41 @@ export default function Settings({ snap }) {
           sub="Water and movement are judged against the animal's own history, not a yard average"
         >
           <BaselineEditor snap={snap} />
+        </Card>
+
+        <Card
+          title="Feeding and mucking out"
+          sub="The default rounds a horse gets, and what the box screens count against"
+        >
+          <div className="grid" style={{ gap: 12 }}>
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="Feeds per day" hint="Default for a new horse">
+                <input
+                  className="inp nums"
+                  type="number"
+                  min="0"
+                  max="8"
+                  value={(s.care || DEFAULT_CARE).feeds}
+                  onChange={(e) => actions.setSettings({ care: { ...(s.care || DEFAULT_CARE), feeds: Number(e.target.value) } })}
+                />
+              </Field>
+              <Field label="Muck outs per day" hint="Default for a new horse">
+                <input
+                  className="inp nums"
+                  type="number"
+                  min="0"
+                  max="8"
+                  value={(s.care || DEFAULT_CARE).cleans}
+                  onChange={(e) => actions.setSettings({ care: { ...(s.care || DEFAULT_CARE), cleans: Number(e.target.value) } })}
+                />
+              </Field>
+            </div>
+            <div className="hint" style={{ lineHeight: 1.7 }}>
+              Any horse can override these on its own profile — a horse on four small feeds is set there, not here. Rounds
+              are spread across the working day, and a box is only counted behind once a slot has passed with half an
+              hour's grace, so the screens do not nag a yard that is simply running a little late.
+            </div>
+          </div>
         </Card>
 
         <Card title="Who gets told">

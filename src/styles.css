@@ -632,3 +632,211 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .bm-stats .critical { color: var(--critical); }
 
 @media (max-width: 1150px) { .dash-main { grid-template-columns: 1fr !important; } }
+
+/* ==========================================================================
+   The screen on the front of the box.
+   A fixed landscape panel, read from the aisle, pressed with a gloved hand —
+   so everything here is bigger and higher contrast than the web app.
+   ========================================================================== */
+
+.fos { position: relative; width: 100%; }
+.fos-screen {
+  aspect-ratio: 16 / 9; width: 100%; display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) 232px;
+  background: linear-gradient(150deg, #0a2ea8 0%, #123fd0 45%, #0b2f9e 100%);
+  color: #fff; border-radius: 12px; overflow: hidden;
+  border: 3px solid #0a1f5e; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.35);
+  container-type: inline-size;
+}
+
+/* left rail */
+.fos-rail {
+  padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+}
+.fos-logo { width: 92px; height: auto; }
+.fos-metrics { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.fos-metric { display: flex; flex-direction: column; align-items: center; gap: 1px; color: #cfe0ff; }
+.fos-metric-v { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+.fos-metric-l { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; opacity: 0.75; }
+.fos-metric.good { color: #7ff2a8; }
+.fos-metric.warning { color: #ffd166; }
+.fos-metric.serious { color: #ffb08a; }
+.fos-metric.critical { color: #ff9c9c; }
+
+/* centre */
+.fos-body { padding: 18px 20px 14px; display: flex; flex-direction: column; min-width: 0; }
+.fos-id h2 {
+  font-size: 34px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.fos-sub { display: flex; gap: 20px; margin-top: 6px; font-size: 14px; color: #d6e3ff; flex-wrap: wrap; }
+.fos-sub b { font-weight: 700; color: #fff; }
+.fos-facts { margin: 16px 0 0; display: grid; gap: 7px; font-size: 17px; }
+.fos-facts div { display: flex; gap: 9px; min-width: 0; align-items: baseline; }
+.fos-facts dt { font-weight: 800; color: #fff; flex: none; }
+.fos-facts dd { margin: 0; color: #dbe7ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fos-note {
+  margin-top: auto; display: flex; gap: 10px; align-items: flex-start;
+  border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 10px; color: #dbe7ff;
+}
+.fos-note p { margin: 0; font-size: 14px; line-height: 1.45; }
+
+/* right */
+.fos-side {
+  padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+.fos-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fos-clock { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: #cfe0ff; }
+.fos-tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 2px; }
+
+.fos-task {
+  position: relative; background: rgba(255, 255, 255, 0.08); border: 0; cursor: pointer;
+  border-radius: 14px; padding: 8px 4px 9px; color: #fff; display: flex;
+  flex-direction: column; align-items: center; gap: 1px; min-height: 124px;
+  -webkit-tap-highlight-color: transparent;
+}
+.fos-task:active { transform: scale(0.97); }
+.fos-task .fos-ring { position: absolute; top: 6px; width: 76px; height: 76px; }
+.fos-ring .track { fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 9; }
+.fos-ring .fill { fill: none; stroke: #5bd98a; stroke-width: 9; stroke-linecap: round; }
+.fos-task.behind .fos-ring .fill { stroke: #ffc44d; }
+.fos-task.open .fos-ring .fill { stroke: #6fb4ff; }
+.fos-task-ico {
+  width: 76px; height: 76px; display: grid; place-items: center; color: #fff;
+}
+.fos-task-ico svg { width: 34px; height: 34px; }
+.fos-task-count { font-size: 19px; font-weight: 800; line-height: 1; margin-top: 2px; }
+.fos-task-count i { font-style: normal; font-size: 13px; opacity: 0.7; }
+.fos-task-label { font-size: 10.5px; font-weight: 700; text-align: center; padding: 0 4px; line-height: 1.25; }
+.fos-task.done .fos-task-label { color: #8ff0b4; }
+.fos-task.behind .fos-task-label { color: #ffd98a; }
+.fos-task-last { font-size: 9px; opacity: 0.6; }
+
+.fos-menu {
+  margin-top: auto; align-self: flex-end; background: none; border: 0; cursor: pointer;
+  display: flex; gap: 3px; padding: 8px 4px;
+}
+.fos-menu span { width: 3px; height: 17px; background: #cfe0ff; border-radius: 2px; }
+
+/* the confirm the panel asks before it writes anything down */
+.fos-confirm {
+  position: absolute; inset: 0; background: rgba(4, 16, 60, 0.82);
+  display: grid; place-items: center; border-radius: 12px; padding: 16px;
+}
+.fos-confirm-box {
+  background: #0f2f9e; border: 2px solid rgba(255, 255, 255, 0.25); border-radius: 16px;
+  padding: 20px 24px; text-align: center; max-width: 380px; color: #fff;
+}
+.fos-confirm-box h3 { font-size: 20px; margin: 6px 0 4px; }
+.fos-confirm-box p { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: #d9e5ff; }
+.fos-confirm-acts { display: flex; gap: 10px; justify-content: center; }
+.fos-btn {
+  border: 0; border-radius: 10px; padding: 11px 20px; font-size: 15px; font-weight: 700;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+}
+.fos-btn.go { background: #2fc46a; color: #04240f; }
+.fos-btn.ghost { background: rgba(255, 255, 255, 0.15); color: #fff; }
+
+/* the panel scales down with its container rather than reflowing */
+@container (max-width: 640px) {
+  .fos-screen { grid-template-columns: 92px minmax(0, 1fr) 190px; }
+  .fos-id h2 { font-size: 26px; }
+  .fos-facts { font-size: 13px; }
+  .fos-task { min-height: 108px; }
+}
+.care-row { display: flex; gap: 11px; align-items: center; }
+
+/* ==========================================================================
+   The screen on the barn door.
+   A wall-mounted touchscreen: the plan of the building, live, pressable.
+   ========================================================================== */
+
+.fob {
+  position: relative; background: linear-gradient(160deg, #0b1f3d, #0f2c56 60%, #0a1c36);
+  border: 3px solid #071427; border-radius: 12px; color: #fff; padding: 16px 18px 12px;
+  container-type: inline-size;
+}
+.fob-hd { display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+.fob-hd h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.fob-sub { font-size: 13px; color: #9cb8dd; margin-top: 2px; }
+.fob-clock { margin-left: auto; font-size: 17px; font-weight: 700; color: #bcd3f0; }
+.fob-readings { display: flex; gap: 10px; flex-wrap: wrap; }
+.fob-reading {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: rgba(255, 255, 255, 0.07); border-radius: 10px; padding: 6px 12px; min-width: 84px;
+  color: #b9d2f2;
+}
+.fob-reading .v { font-size: 17px; font-weight: 800; color: #fff; }
+.fob-reading .l { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+.fob-reading.good { color: #7ff2a8; }
+.fob-reading.warning { color: #ffd166; }
+.fob-reading.serious { color: #ffb08a; }
+.fob-reading.critical { color: #ff9c9c; }
+
+.fob-plan { display: grid; gap: 7px; }
+.fob-cell {
+  border-radius: 8px; min-height: 76px; display: grid; place-items: center;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.fob-cell.empty { background: none; border: 0; }
+.fob-cell.aisle { background: rgba(255, 255, 255, 0.02); border-style: solid; }
+
+/* a box is a target, not a table row */
+.fob-box {
+  position: relative; text-align: left; cursor: pointer; min-height: 76px;
+  border-radius: 10px; padding: 7px 8px; display: flex; flex-direction: column; gap: 2px;
+  background: rgba(255, 255, 255, 0.09); color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14); border-left: 4px solid rgba(255, 255, 255, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+.fob-box:active { transform: scale(0.98); }
+.fob-box:hover { background: rgba(255, 255, 255, 0.15); }
+.fob-box.good { border-left-color: #35c46e; }
+.fob-box.warning { border-left-color: #f5bf3f; }
+.fob-box.serious { border-left-color: #f08a54; }
+.fob-box.critical { border-left-color: #f05a5a; background: rgba(240, 90, 90, 0.16); }
+.fob-box.free { background: rgba(255, 255, 255, 0.03); border-style: dashed; color: #8fabd0; }
+.fob-box-hd { display: flex; align-items: center; gap: 6px; }
+.fob-box-nm { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #9cb8dd; }
+.fob-box-hd > span:last-child { margin-left: auto; }
+.fob-box-an {
+  font-size: 13.5px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fob-box-free { font-size: 11px; }
+.fob-box-stats { display: flex; gap: 8px; font-size: 10.5px; color: #bcd3f0; margin-top: 1px; }
+.fob-box-stats i { font-style: normal; }
+.fob-box-rounds { display: flex; gap: 8px; font-size: 9.5px; color: #8fabd0; margin-top: auto; }
+.fob-box-rounds > span { display: inline-flex; align-items: center; gap: 2px; }
+.fob-box-rounds .ok { color: #7ff2a8; }
+.fob-box-rounds .late { color: #ffd166; }
+.fob-box-flag { position: absolute; top: 6px; right: 6px; color: #ff9c9c; display: flex; }
+
+.fob-key {
+  display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 10.5px; color: #9cb8dd;
+}
+.fob-key > span { display: inline-flex; align-items: center; gap: 5px; }
+.fob-key .k { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.fob-key .k.good { background: #35c46e; }
+.fob-key .k.warning { background: #f5bf3f; }
+.fob-key .k.serious { background: #f08a54; }
+.fob-key .k.critical { background: #f05a5a; }
+.fob-key-hint { margin-left: auto; font-style: italic; }
+
+/* pressing a box brings its own panel up over the plan */
+.fob-overlay {
+  position: absolute; inset: 0; background: rgba(4, 12, 26, 0.78);
+  display: grid; place-items: center; padding: 18px; border-radius: 10px; z-index: 5;
+}
+.fob-overlay-inner { width: min(100%, 820px); }
+
+@container (max-width: 760px) {
+  .fob-box-an { font-size: 12px; }
+  .fob-cell, .fob-box { min-height: 66px; }
+}

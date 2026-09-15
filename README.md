@@ -84,6 +84,40 @@ keep it affordable, in order of how much they matter:
 The four live feeds on the dashboard therefore cost about an eighth of what the
 camera wall already did before any of this, and nothing at all when scrolled past.
 
+## The two screens on the wall
+
+The product is not only the web app. There is a panel on the front of every box
+and a panel on every barn door, both touchscreens, both viewable in the app so the
+yard can see what its staff are looking at.
+
+**Front of stall** (`components/FrontOfStall.jsx`, from a stall or animal profile).
+A fixed landscape panel at head height, read from the aisle and pressed with a
+gloved hand, so it is laid out for distance and thumbs: three readings down the left
+rail, who the horse is through the middle — name, age, sex, colour, sire, dam, owner,
+groom — the owner's silks and the clock top right, and the note the office has pushed
+to the box along the bottom.
+
+The two big buttons are the point of it. The yard decides in the web app how many
+feeds and how many muck-outs a given horse gets; the groom presses, confirms, and
+the system has a record of **who did what, in which box, at what time**. The ring
+round each button fills as the rounds are done, so an unfinished box is visible from
+down the aisle without stopping at it, and a box that has fallen behind its schedule
+raises an alert like any other finding.
+
+Targets live on the animal rather than the box, because a horse moved to another
+stall takes its feeding regime with it.
+
+**Front of barn** (`components/FrontOfBarn.jsx`, the *Barn screen* tab). State of the
+nation for one building: the plan exactly as it was laid out, drawn sleeker — service
+rooms recede, every box carries its horse, its three readings, its rounds and its
+silks, and anything wrong is a colour rather than a number to go and look up. It is a
+touchscreen, so a box is a target: press one and that stall's own panel comes up over
+the plan.
+
+Rounds are spread across a working day and a box only counts as behind once a slot
+has passed with half an hour's grace — a yard running slightly late should not be
+nagged by its own walls.
+
 ## Learning each horse
 
 A fixed threshold is the right shape for the box and the wrong shape for the

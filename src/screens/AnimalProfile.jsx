@@ -16,6 +16,8 @@ import { stallAlerts, stallState } from "../lib/insights";
 import { welfareIndex, welfareTrend } from "../lib/score";
 import { activityDeviation, intakeDeviation, learnedBaseline } from "../lib/baseline";
 import { WelfareBreakdown, WelfareRing, WelfareTrend } from "../components/Welfare";
+import FrontOfStall from "../components/FrontOfStall";
+import { CARE, careToday } from "../lib/care";
 import { BEHAVIOUR, DAY_MS, behaviourDay, cameraEvents, dayReadings, startOfDay } from "../lib/sim";
 
 const TONE = { good: "#0ca30c", warning: "#fab219", serious: "#ec835a", critical: "#d03b3b", flat: "#9fb6cb" };
@@ -25,6 +27,7 @@ export default function AnimalProfile({ id }) {
   const [range, setRange] = useState("today");
   const [noting, setNoting] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [screen, setScreen] = useState(false);
   const [editing, setEditing] = useState(false);
 
   const animal = world.animals.find((a) => a.id === id);
@@ -85,9 +88,14 @@ export default function AnimalProfile({ id }) {
         </div>
         <div className="hd-actions">
           {stall && (
-            <button className="btn" onClick={() => go(`video/${stall.id}`)}>
-              <Icon name="video" size={15} /> Watch camera
-            </button>
+            <>
+              <button className="btn" onClick={() => setScreen(true)}>
+                <Icon name="screen" size={15} /> Stall screen
+              </button>
+              <button className="btn" onClick={() => go(`video/${stall.id}`)}>
+                <Icon name="video" size={15} /> Watch camera
+              </button>
+            </>
           )}
           <button className="btn" onClick={() => setNoting(true)}>
             <Icon name="note" size={15} /> Add note
@@ -100,6 +108,21 @@ export default function AnimalProfile({ id }) {
           </button>
         </div>
       </div>
+
+      {stall && (
+        <Card
+          title="Feeding and mucking out"
+          sub="Recorded from the screen on the front of the box"
+          style={{ marginBottom: 16 }}
+          right={
+            <button className="btn sm" onClick={() => setScreen(true)}>
+              <Icon name="screen" size={14} /> Open the stall screen
+            </button>
+          }
+        >
+          <CareCard animal={animal} now={now} />
+        </Card>
+      )}
 
       {stall && baseline && (
         <Card
@@ -307,6 +330,26 @@ export default function AnimalProfile({ id }) {
             </Card>
           </div>
         </div>
+      )}
+
+      {screen && stall && (
+        <Modal
+          title={`${stall.name} — screen on the box front`}
+          wide
+          onClose={() => setScreen(false)}
+          footer={
+            <>
+              <span className="small mute" style={{ marginRight: "auto", lineHeight: 1.5 }}>
+                Live panel. Pressing a button here records the round exactly as it would on the box.
+              </span>
+              <button className="btn" onClick={() => setScreen(false)}>
+                Close
+              </button>
+            </>
+          }
+        >
+          <FrontOfStall stall={stall} animal={animal} state={st} now={now} onClose={() => setScreen(false)} />
+        </Modal>
       )}
 
       {noting && <NoteModal animal={animal} onClose={() => setNoting(false)} />}
@@ -532,6 +575,74 @@ function Baseline({ baseline, dev, move, today }) {
           sore before it is lame.
         </div>
       </div>
+    </div>
+  );
+}
+
+/* --------------------------- the day's rounds ------------------------------ */
+
+function CareCard({ animal, now }) {
+  const { world, actions } = useWorld();
+  const care = careToday(world, animal, now);
+  const [note, setNote] = useState(animal.stallNote || "");
+
+  const row = (kind) => {
+    const c = care[kind];
+    const meta = CARE[kind];
+    const tone = c.complete ? "good" : c.behind >= 2 ? "serious" : c.behind ? "warning" : "flat";
+    return (
+      <div className="care-row" key={kind}>
+        <span className={`ico ${tone}`} style={{ width: 34, height: 34, borderRadius: 10 }}>
+          <Icon name={meta.icon} size={17} />
+        </span>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className="row" style={{ gap: 8 }}>
+            <b>{meta.label}</b>
+            <Pill tone={tone}>
+              {c.done} of {c.target} today
+            </Pill>
+            {c.behind > 0 && <Pill tone="warning">{c.behind} behind</Pill>}
+          </div>
+          <div className="why">
+            {c.entries.length
+              ? c.entries.map((e) => `${hhmm(e.at)} ${e.by}`).join(" · ")
+              : "Nothing recorded yet today"}
+          </div>
+        </div>
+        <div className="row" style={{ gap: 6 }}>
+          <label className="tiny mute">Per day</label>
+          <input
+            className="inp nums"
+            style={{ width: 62 }}
+            type="number"
+            min="0"
+            max="8"
+            value={care.target[meta.field]}
+            onChange={(e) => actions.setCare(animal.id, { [meta.field]: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="grid" style={{ gap: 12 }}>
+      {row("feed")}
+      {row("clean")}
+      <Field label="Note on the stall screen" hint="Shown on the box front until it is cleared.">
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            className="inp"
+            value={note}
+            placeholder="e.g. Racing Thursday — cheekpieces"
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && actions.setStallNote(animal.id, note.trim())}
+          />
+          <button className="btn" onClick={() => actions.setStallNote(animal.id, note.trim())}>
+            Send
+          </button>
+        </div>
+      </Field>
     </div>
   );
 }

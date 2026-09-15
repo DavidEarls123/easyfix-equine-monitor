@@ -12,6 +12,7 @@ import { C, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
+import FrontOfBarn from "../components/FrontOfBarn";
 import { go } from "../lib/router";
 import { barnAlerts } from "../lib/insights";
 import { CELL } from "../lib/world";
@@ -19,6 +20,7 @@ import { DAY_MS, dayReadings, startOfDay } from "../lib/sim";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "grid" },
+  { id: "door", label: "Barn screen", icon: "screen" },
   { id: "stock", label: "Stock", icon: "stock" },
   { id: "layout", label: "Barn", icon: "barn" },
 ];
@@ -91,6 +93,13 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
         </Card>
       ) : at === "overview" ? (
         <Overview roll={roll} alerts={alerts} now={now} onAssign={setAssigning} onRename={setRenaming} />
+      ) : at === "door" ? (
+        <Card
+          title={`${barn.name} — screen on the barn door`}
+          sub="What the wall panel at the entrance shows. Press a box for its own stall screen."
+        >
+          <FrontOfBarn roll={roll} now={now} />
+        </Card>
       ) : at === "stock" ? (
         <Stock roll={roll} alerts={alerts.filter((a) => a.kind === "stock")} now={now} onSet={(p) => actions.setStock(barn.id, p)} />
       ) : (

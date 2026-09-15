@@ -10,6 +10,7 @@ import { today, trailing, cameraEvents, behaviourAt, identityCheck, dayKey, star
 import { animalOf, stallsOf } from "./world";
 import { yardWelfare } from "./score";
 import { activityDeviation, intakeDeviation, learnedBaseline } from "./baseline";
+import { CARE, careToday } from "./care";
 
 export const RANK = { critical: 0, serious: 1, warning: 2, good: 3, info: 4 };
 export const bySeverity = (a, b) => RANK[a.severity] - RANK[b.severity] || b.ts - a.ts;
@@ -248,6 +249,31 @@ export function stallAlerts(world, st, now) {
       })
     );
   }
+
+  // rounds the box screen has not had pressed. The yard set the target, so a
+  // box that is two rounds down by the afternoon is a real gap, not a nag
+  ["feed", "clean"].forEach((kind) => {
+    const c = careToday(world, animal, now)[kind];
+    if (c.behind < 1) return;
+    const meta = CARE[kind];
+    out.push(
+      mk({
+        ...base,
+        id: `care:${kind}:${stall.id}:${key}`,
+        severity: c.behind >= 2 ? "warning" : "info",
+        kind: "care",
+        title: `${animal.name} is ${c.behind} ${kind === "feed" ? "feed" : "muck out"}${c.behind === 1 ? "" : "s"} behind`,
+        detail: `${c.done} of ${c.target} recorded on the box screen today, ${c.due} due by now.${
+          c.last ? ` Last done at ${new Date(c.last.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} by ${c.last.by}.` : " Nothing recorded today."
+        }`,
+        recommendation:
+          kind === "feed"
+            ? "Check the horse has actually been fed and the round simply was not pressed in — the record is what the yard is judged on."
+            : "Get the box done, and press it in on the stall screen so the record matches the building.",
+        actions: [{ id: "openAnimal", label: "Open profile" }],
+      })
+    );
+  });
 
   // movement, like water, only means something against this horse's own normal
   if (movement && !movement.tooEarly && movement.low && world.settings.camera.behaviour) {

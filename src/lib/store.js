@@ -90,6 +90,43 @@ export function WorldProvider({ children }) {
         say("Profile removed");
       },
 
+      /* --------------------------- feeding and mucking out -------------------- */
+
+      /** A worker pressed the button on the front of a box and confirmed it. */
+      logCare(stallId, animalId, kind, by) {
+        const entry = { id: uid("cr_"), at: Date.now(), stallId, animalId, kind, by: by || "Yard" };
+        edit((w) => {
+          // the log is the record the yard is keeping, so it is capped rather
+          // than trimmed by date — a week of a 300-box yard still fits
+          w.careLog = [entry, ...(w.careLog || [])].slice(0, 4000);
+          return w;
+        });
+        say(kind === "feed" ? "Feed recorded" : "Muck out recorded");
+        return entry;
+      },
+      undoCare(entryId) {
+        edit((w) => {
+          w.careLog = (w.careLog || []).filter((e) => e.id !== entryId);
+          return w;
+        });
+        say("Entry removed");
+      },
+      /** How often this horse is fed and its box done, set in the web app. */
+      setCare(animalId, patch) {
+        edit((w) => {
+          w.animals = w.animals.map((a) => (a.id === animalId ? { ...a, care: { ...(a.care || {}), ...patch } } : a));
+          return w;
+        });
+      },
+      /** The line the grooms see on the screen on the front of the box. */
+      setStallNote(animalId, text) {
+        edit((w) => {
+          w.animals = w.animals.map((a) => (a.id === animalId ? { ...a, stallNote: text } : a));
+          return w;
+        });
+        say(text ? "Sent to the stall screen" : "Cleared from the stall screen");
+      },
+
       /* -------------------------------- stalls ------------------------------ */
       assign(stallId, animalId) {
         edit((w) => {

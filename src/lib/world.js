@@ -11,8 +11,9 @@ import { noise, between } from "./sim";
 import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
+import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
 
-export const VERSION = 7;
+export const VERSION = 8;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -44,6 +45,8 @@ export const DEFAULT_SETTINGS = {
   passport: { ...DEFAULT_PASSPORT },
   // how the app learns what is normal for each individual horse
   baseline: { ...DEFAULT_BASELINE },
+  // default rounds per day; a horse can override its own
+  care: { ...DEFAULT_CARE },
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
 };
 
@@ -198,6 +201,7 @@ export function seedWorld() {
     stalls: [],
     animals: [],
     alertState: {},
+    careLog: [],
     seenNotifications: {},
     log: [],
   };
@@ -258,7 +262,7 @@ export function seedWorld() {
     }
   });
 
-  return world;
+  return seedCare(world);
 }
 
 /** Bulk yard for the scale demo: a customer running 300 monitored boxes. */
@@ -296,7 +300,65 @@ export function bigYard(world, barnCount = 10, perBarn = 30) {
       st.animalId = animal.id;
     });
   }
-  return next;
+  return seedCare(next);
 }
 
 export { uid };
+
+/* --------------------------- the day's care record ------------------------- */
+
+/**
+ * A believable morning: most boxes done on time, a few behind. Without this the
+ * stall screens all read 0 of 3 and the feature looks broken rather than idle.
+ */
+function seedCare(world) {
+  const now = Date.now();
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const grooms = ["Graham", "Aoife", "Danny", "Marta", "Sean"];
+  const log = [];
+
+  world.stalls.forEach((st) => {
+    if (!st.animalId) return;
+    const animal = world.animals.find((a) => a.id === st.animalId);
+    if (!animal) return;
+    const target = { ...DEFAULT_CARE, ...(animal.care || {}) };
+    ["feed", "clean"].forEach((kind) => {
+      const want = kind === "feed" ? target.feeds : target.cleans;
+      const due = dueByNow(want, now);
+      // roughly one box in five is a round behind, which is what a yard looks like
+      const slip = noise(`slip|${st.id}|${kind}`) < 0.2 ? 1 : 0;
+      const doneCount = Math.max(0, due - slip);
+      dueTimes(want)
+        .slice(0, doneCount)
+        .forEach((hour, i) => {
+          const at = dayStart.getTime() + Math.round((hour + between(`late|${st.id}|${kind}|${i}`, -0.15, 0.45)) * 3600000);
+          if (at > now) return;
+          log.push({
+            id: `cr_seed_${st.id}_${kind}_${i}`,
+            at,
+            stallId: st.id,
+            animalId: animal.id,
+            kind,
+            by: grooms[Math.floor(noise(`who|${st.id}|${kind}|${i}`) * grooms.length) % grooms.length],
+          });
+        });
+    });
+  });
+
+  world.careLog = log.sort((a, b) => b.at - a.at);
+
+  // the lines a yard actually pins to a box front
+  const notes = {
+    "Honesty Policy": "Racing in Limerick 10/10/26 — cheekpieces",
+    Wodhooh: "Vet due 09:00. No hard feed until seen.",
+    Ndaawi: "Bucket by hand until the meter is fixed",
+    "Irish Point": "Trot up before work — watch the off fore",
+    Mordor: "Top door open, box runs warm",
+    "Casheldale Lad": "Extra bedding, skip out again this evening",
+  };
+  world.animals.forEach((a) => {
+    if (notes[a.name]) a.stallNote = notes[a.name];
+  });
+  return world;
+}
