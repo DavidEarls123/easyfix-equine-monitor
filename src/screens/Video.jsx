@@ -23,16 +23,62 @@ export default function Video({ stallId, snap }) {
 
 /* ------------------------------- camera wall ------------------------------- */
 
+/** A stall's welfare index, or 101 so unscored boxes sort last. */
+const scoreOf = (snap, x) =>
+  (snap.welfare?.scored || []).find((w) => w.stall.id === x.stall.id)?.welfare.score ?? 101;
+
 function Wall({ snap }) {
   const { world, now } = useWorld();
-  const params = new URLSearchParams((window.location.hash.split("?")[1] || ""));
+  const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
   const [barn, setBarn] = useState(params.get("barn") || "all");
+  const [owner, setOwner] = useState("all");
+  const [sort, setSort] = useState("barn");
+  const [q, setQ] = useState("");
   const [limit, setLimit] = useState(12);
 
+  // every owner with a horse in a monitored box, so the list has no dead options
+  const owners = useMemo(() => {
+    const set = new Set();
+    world.stalls.forEach((st) => {
+      const a = st.animalId ? world.animals.find((x) => x.id === st.animalId) : null;
+      if (a?.owner) set.add(a.owner);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [world]);
+
+  const all = useMemo(
+    () => snap.rolls.flatMap((r) => r.states.map((x) => ({ ...x, barn: r.barn }))).filter((x) => x.stall),
+    [snap]
+  );
+
   const tiles = useMemo(() => {
-    const rolls = barn === "all" ? snap.rolls : snap.rolls.filter((r) => r.barn.id === barn);
-    return rolls.flatMap((r) => r.states.map((x) => ({ ...x, barn: r.barn }))).filter((x) => x.stall);
-  }, [snap, barn]);
+    const needle = q.trim().toLowerCase();
+    let out = all;
+    if (barn !== "all") out = out.filter((x) => x.barn.id === barn);
+    if (owner !== "all") out = out.filter((x) => x.animal?.owner === owner);
+    if (needle.length >= 2)
+      out = out.filter((x) =>
+        [x.animal?.name, x.stall.name, x.barn.name, x.animal?.owner, x.animal?.trainer, x.animal?.microchip]
+          .filter(Boolean)
+          .some((f) => String(f).toLowerCase().includes(needle))
+      );
+
+    const byName = (x) => x.animal?.name || "\uffff"; // empty boxes sort last
+    const sorters = {
+      barn: (a, b) => a.barn.name.localeCompare(b.barn.name) || a.stall.index - b.stall.index,
+      az: (a, b) => byName(a).localeCompare(byName(b)),
+      za: (a, b) => byName(b).localeCompare(byName(a)),
+      owner: (a, b) =>
+        (a.animal?.owner || "\uffff").localeCompare(b.animal?.owner || "\uffff") || byName(a).localeCompare(byName(b)),
+      attention: (a, b) => scoreOf(snap, a) - scoreOf(snap, b), // worst welfare first
+    };
+    return out.slice().sort(sorters[sort] || sorters.barn);
+  }, [all, barn, owner, q, sort, snap]);
+
+  // a narrowed wall should show what it found rather than make you page to it
+  useEffect(() => setLimit(12), [barn, owner, q, sort]);
+
+  const filtered = tiles.length !== all.length;
 
   return (
     <>
@@ -40,11 +86,32 @@ function Wall({ snap }) {
         <div>
           <h1>Live streaming</h1>
           <div className="sub">
-            {tiles.length} cameras · AI identity and behaviour overlay on every feed
+            {filtered ? `${tiles.length} of ${all.length}` : `${all.length}`} cameras · AI identity and behaviour overlay
+            on every feed
           </div>
         </div>
-        <div className="hd-actions">
-          <select className="sel" style={{ width: "auto" }} value={barn} onChange={(e) => setBarn(e.target.value)}>
+      </div>
+
+      <div className="filters">
+        <label className="filter filter-search">
+          <span>Search</span>
+          <Icon name="search" size={15} />
+          <input
+            className="inp"
+            placeholder="Search a horse, box, owner or trainer"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          {q && (
+            <button className="icon-btn sm" onClick={() => setQ("")} aria-label="Clear search">
+              <Icon name="close" size={14} />
+            </button>
+          )}
+        </label>
+
+        <label className="filter">
+          <span>Barn</span>
+          <select className="sel" value={barn} onChange={(e) => setBarn(e.target.value)}>
             <option value="all">All barns</option>
             {world.barns
               .filter((b) => b.configured)
@@ -54,12 +121,53 @@ function Wall({ snap }) {
                 </option>
               ))}
           </select>
-        </div>
+        </label>
+
+        <label className="filter">
+          <span>Owner</span>
+          <select className="sel" value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <option value="all">All owners</option>
+            {owners.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="filter">
+          <span>Sort</span>
+          <select className="sel" value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="barn">Barn and box order</option>
+            <option value="az">Horse A–Z</option>
+            <option value="za">Horse Z–A</option>
+            <option value="owner">Owner</option>
+            <option value="attention">Needs attention first</option>
+          </select>
+        </label>
+
+        {filtered && (
+          <button
+            className="btn sm"
+            onClick={() => {
+              setBarn("all");
+              setOwner("all");
+              setQ("");
+              setSort("barn");
+            }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {tiles.length === 0 ? (
         <Card>
-          <Empty icon="video">No cameras yet — lay out a barn to add monitored boxes.</Empty>
+          <Empty icon="video">
+            {all.length === 0
+              ? "No cameras yet — lay out a barn to add monitored boxes."
+              : "No camera matches those filters."}
+          </Empty>
         </Card>
       ) : (
         <>

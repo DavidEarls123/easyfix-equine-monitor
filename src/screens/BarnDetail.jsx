@@ -11,6 +11,7 @@ import LayoutEditor from "../components/LayoutEditor";
 import { C, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
+import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import { go } from "../lib/router";
 import { barnAlerts } from "../lib/insights";
 import { CELL } from "../lib/world";
@@ -27,6 +28,7 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
   const roll = snap.rolls.find((r) => r.barn.id === id) || snap.rolls[0];
   const [assigning, setAssigning] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [renaming, setRenaming] = useState(null); // a barn or a stall being renamed
 
   if (!roll) return <Empty icon="barn">No barns yet. Add one from the yard screen.</Empty>;
   const barn = roll.barn;
@@ -41,6 +43,13 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
       <div className="page-hd">
         <div className="row" style={{ gap: 10 }}>
           <h1>{barn.name}</h1>
+          <button
+            className="icon-btn"
+            title="Rename this barn"
+            onClick={() => setRenaming({ kind: "barn", id: barn.id, name: barn.name })}
+          >
+            <Icon name="edit" size={15} />
+          </button>
           <select
             className="sel"
             style={{ width: "auto" }}
@@ -81,11 +90,23 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
           </Empty>
         </Card>
       ) : at === "overview" ? (
-        <Overview roll={roll} alerts={alerts} now={now} onAssign={setAssigning} />
+        <Overview roll={roll} alerts={alerts} now={now} onAssign={setAssigning} onRename={setRenaming} />
       ) : at === "stock" ? (
         <Stock roll={roll} alerts={alerts.filter((a) => a.kind === "stock")} now={now} onSet={(p) => actions.setStock(barn.id, p)} />
       ) : (
         <Layout roll={roll} editing={editing} setEditing={setEditing} onAssign={setAssigning} />
+      )}
+
+      {renaming && (
+        <RenameModal
+          target={renaming}
+          onClose={() => setRenaming(null)}
+          onSave={(name) => {
+            if (renaming.kind === "barn") actions.renameBarn(renaming.id, name);
+            else actions.renameStall(renaming.id, name);
+            setRenaming(null);
+          }}
+        />
       )}
 
       {assigning && <Assign stall={assigning} onClose={() => setAssigning(null)} />}
@@ -95,7 +116,7 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
 
 /* -------------------------------- overview -------------------------------- */
 
-function Overview({ roll, alerts, now, onAssign }) {
+function Overview({ roll, alerts, now, onAssign, onRename }) {
   const { world } = useWorld();
   const s = world.settings;
   const [page, setPage] = useState(0);
@@ -126,7 +147,7 @@ function Overview({ roll, alerts, now, onAssign }) {
               </thead>
               <tbody>
                 {shown.map((x) => (
-                  <Row key={x.stall.id} x={x} s={s} now={now} onAssign={onAssign} />
+                  <Row key={x.stall.id} x={x} s={s} now={now} onAssign={onAssign} onRename={onRename} />
                 ))}
               </tbody>
             </table>
@@ -176,7 +197,7 @@ function Overview({ roll, alerts, now, onAssign }) {
   );
 }
 
-function Row({ x, s, now, onAssign }) {
+function Row({ x, s, now, onAssign, onRename }) {
   const { stall, animal, today: t, behaviour } = x;
   const week = useMemo(() => {
     if (!animal) return [];
@@ -188,7 +209,7 @@ function Row({ x, s, now, onAssign }) {
     return (
       <tr>
         <td>
-          <b>{stall.name}</b>
+          <StallName stall={stall} onRename={onRename} />
         </td>
         <td className="mute" colSpan={5}>
           Empty box
@@ -202,15 +223,18 @@ function Row({ x, s, now, onAssign }) {
     );
 
   const pace = t.offline ? null : t.pctOfGoal;
-  const paceTone = pace == null ? "flat" : pace < 50 ? "critical" : pace < s.intakeLowPct ? "warning" : pace > 130 ? "warning" : "good";
+  const water = waterStatus(t, s);
+  const temp = tempStatus(t.tempNow, s);
+  const air = airStatus(t.airNow, s, t.nh3Now);
+  const paceTone = water.tone;
   const arrow = pace == null ? "—" : pace < s.intakeLowPct ? "↓" : pace > 130 ? "↑" : "↔";
-  const tempTone = t.tempNow == null ? "flat" : t.tempNow > s.tempMax ? "warning" : t.tempNow < s.tempMin ? "warning" : "good";
-  const airTone = t.airNow < s.airMin - 10 ? "serious" : t.airNow < s.airMin ? "warning" : "good";
+  const tempTone = temp.tone;
+  const airTone = air.tone;
 
   return (
     <tr>
       <td>
-        <b>{stall.name}</b>
+        <StallName stall={stall} onRename={onRename} />
       </td>
       <td>
         <div className="row" style={{ gap: 9, justifyContent: "center" }}>
@@ -221,7 +245,11 @@ function Row({ x, s, now, onAssign }) {
         </div>
       </td>
       <td className="nums">
-        {t.offline ? <Pill tone="critical" icon="alert">No data</Pill> : `${t.intakeL} L`}
+        {t.offline ? (
+          <Pill tone="critical" icon="alert">No data</Pill>
+        ) : (
+          <Pill tone={water.tone} title={water.hint}>{t.intakeL} L</Pill>
+        )}
         {!t.offline && week.length > 1 && (
           <div style={{ display: "grid", placeItems: "center", marginTop: 2 }}>
             <Sparkline values={week} color={C.water} w={72} h={18} />
@@ -459,6 +487,62 @@ function Assign({ stall, onClose }) {
             </option>
           ))}
         </select>
+      </Field>
+    </Modal>
+  );
+}
+
+/* A box is not always "Stall 4" — plenty of yards name them. */
+function StallName({ stall, onRename }) {
+  return (
+    <div className="row" style={{ gap: 6, justifyContent: "center" }}>
+      <b>{stall.name}</b>
+      {onRename && (
+        <button
+          className="icon-btn sm rename"
+          title={`Rename ${stall.name}`}
+          onClick={() => onRename({ kind: "stall", id: stall.id, name: stall.name })}
+        >
+          <Icon name="edit" size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RenameModal({ target, onClose, onSave }) {
+  const [name, setName] = useState(target.name);
+  const save = () => name.trim() && onSave(name.trim());
+  return (
+    <Modal
+      title={target.kind === "barn" ? "Rename barn" : "Rename box"}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn pri" disabled={!name.trim()} onClick={save}>
+            Save
+          </button>
+        </>
+      }
+    >
+      <Field
+        label={target.kind === "barn" ? "Barn name" : "Box name"}
+        hint={
+          target.kind === "barn"
+            ? "Use the name on the building rather than a number."
+            : "Yards often name boxes after the horse's owner, a sponsor or the end of the barn."
+        }
+      >
+        <input
+          className="inp"
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+        />
       </Field>
     </Modal>
   );

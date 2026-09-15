@@ -82,9 +82,9 @@ export function Tabs({ items, value, onChange }) {
   );
 }
 
-export function Pill({ tone = "", children, icon }) {
+export function Pill({ tone = "", children, icon, title }) {
   return (
-    <span className={`pill ${tone}`}>
+    <span className={`pill ${tone}`} title={title}>
       {icon && <Icon name={icon} size={12} />}
       {children}
     </span>

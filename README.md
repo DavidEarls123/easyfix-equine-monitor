@@ -23,10 +23,18 @@ each carrying its own criticality. Alongside it: the yard's welfare average, the
 horses sitting lowest on it, water intake and stall temperature by hour, the intake
 outliers against their own six-day averages, barn health, and the camera's calls.
 
-**Yard → Barns** — every building, laid out or not. A barn is a grid you paint:
-boxes, aisle, door, tack room, wash bay, feed store. Save it and each box becomes a
-monitored stall with a flow meter, probes and a camera. Occupied boxes are named
-before they are removed.
+**Yard → Barns** — every building, laid out or not, on tiles sized for the ten or
+fifteen barns a yard actually has rather than a hundred. Each tile reads its own
+numbers rather than just printing them: water, temperature and air each carry the
+word that goes with the figure — *on track*, *warm*, *slipping* — and the tile takes
+the colour of the worst thing open in the building, so averages cannot hide a horse.
+A barn is a grid you paint: boxes, aisle, door, tack room, wash bay, feed store.
+Save it and each box becomes a monitored stall with a flow meter, probes and a
+camera. Occupied boxes are named before they are removed.
+
+**Naming** — barns and boxes are renameable everywhere they appear. Plenty of yards
+do not call them Barn 1 and Stall 4, and a renamed box keeps its name when the
+layout is edited around it.
 
 **Barn** — the stall-by-stall table a yard reads in the morning (intake, pace against
 goal, temperature, air, what the camera is calling), the barn's water/feed/bedding
@@ -38,7 +46,9 @@ search, and the horse is dropped into a free box. Each profile carries its intak
 temperature and air charts, the camera's behaviour timeline for the day, the
 identity the camera has settled on, and the yard's notes.
 
-**Video** — every camera on one wall with the identity and behaviour overlay live,
+**Video** — every camera on one wall, filtered by barn or owner, searched by horse,
+box, owner or trainer, and sorted by barn order, name A–Z or Z–A, owner, or worst
+welfare first. With the identity and behaviour overlay live,
 or one camera with the day behind it: scrub the timeline, jump to a flagged clip,
 play back at 1×, 8× or 60×. The stall is drawn in one-point perspective from a unit
 mounted high in the corner, with a lamp that falls off with distance, a lens that
@@ -53,6 +63,16 @@ severity or source.
 and behaviour switches, the welfare index weighting, the passport database the yard
 searches, who gets told, and the demo controls (export the yard, add ten more barns
 of thirty boxes to see it at 300-stall scale, reset).
+
+## Reading a number
+
+`lib/status.js` is the one place that turns a reading into the word a yard would use
+for it, and the colour that goes with it. Water, temperature and air all go through
+it, so the barn tile, the stall table, the animals list and the dashboard say the
+same thing about the same figure, and a box reading *Poor* is the same colour as the
+alert it will raise. Water was the gap this closed — it was showing bare litres next
+to a colour-coded temperature and air score, which left the reader to remember where
+the threshold sat.
 
 ## The welfare index
 

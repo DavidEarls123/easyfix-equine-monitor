@@ -270,13 +270,48 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 
 /* --------------------------- barns / layout ---------------------------- */
 
-.barn-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 16px; }
-.barn-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; }
-.barn-card h3 { color: var(--blue-600); font-size: 17px; margin-bottom: 10px; }
-.barn-card .kv { display: flex; gap: 18px; font-size: 12.5px; color: var(--ink-2); flex-wrap: wrap; }
-.barn-card .kv b { color: var(--ink); }
-.barn-card .acts { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
-.barn-card.empty-state { border-style: dashed; background: #fbfdff; }
+/* A yard has a handful of barns, not hundreds, so the tiles are sized to be
+   read across a room rather than packed in. */
+.barn-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(352px, 1fr)); gap: 18px; }
+.barn-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow); padding: 18px 18px 16px; display: flex; flex-direction: column;
+  border-top: 4px solid var(--line);
+}
+.barn-card.good { border-top-color: var(--good); }
+.barn-card.warning { border-top-color: var(--warning); }
+.barn-card.serious { border-top-color: var(--serious); }
+.barn-card.critical { border-top-color: var(--critical); }
+.bc-hd { display: flex; gap: 14px; align-items: flex-start; }
+.barn-card h3 { color: var(--ink); font-size: 20px; letter-spacing: -0.015em; }
+.bc-sub { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+.bc-occ {
+  height: 5px; border-radius: 3px; background: #e6eef8; overflow: hidden; margin: 14px 0 4px;
+}
+.bc-occ > span { display: block; height: 100%; background: var(--blue-300); border-radius: 3px; }
+
+/* three readings, each with the word that goes with the number */
+.bc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.bc-stat { border: 1px solid var(--line); border-radius: 11px; padding: 9px 10px; background: #fbfdff; }
+.bc-stat-hd {
+  display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.bc-stat-v { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-top: 4px; color: var(--ink); }
+.bc-stat-l { font-size: 11.5px; font-weight: 700; margin-top: 1px; }
+.bc-stat.good { background: #f2fbf3; border-color: #cbe9cd; }
+.bc-stat.good .bc-stat-l { color: #0a7d0a; }
+.bc-stat.warning { background: #fffaef; border-color: #f4e3bb; }
+.bc-stat.warning .bc-stat-l { color: #a9701a; }
+.bc-stat.serious { background: #fff5f0; border-color: #f4d6c6; }
+.bc-stat.serious .bc-stat-l { color: #b2551f; }
+.bc-stat.critical { background: #fef3f3; border-color: #f2cccc; }
+.bc-stat.critical .bc-stat-l { color: #a92c2c; }
+.bc-stat.flat .bc-stat-l { color: var(--muted); }
+.bc-empty { margin-top: 12px; padding: 12px; background: #f7fbff; border-radius: 10px; }
+.bc-ft { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+.bc-setup { margin-top: 12px; }
+.barn-card.empty-state { border-style: dashed; border-top-style: solid; background: #fbfdff; }
 
 .layout-grid { display: grid; gap: 6px; }
 .cell {
@@ -444,3 +479,60 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .welfare-head { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
 .welfare-head-score { flex: none; display: grid; place-items: center; }
 @media (max-width: 720px) { .welfare-head { gap: 14px; } }
+.icon-btn.sm { width: 26px; height: 26px; }
+
+/* ------------------------------- filter bars ------------------------------- */
+
+.filters {
+  display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; box-shadow: var(--shadow); margin-bottom: 16px;
+}
+.filter { display: flex; flex-direction: column; gap: 4px; }
+.filter > span {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted);
+}
+.filter .sel { width: auto; min-width: 150px; }
+.filter-search { position: relative; flex: 1 1 260px; min-width: 220px; }
+.filter-search > svg { position: absolute; left: 11px; bottom: 11px; color: var(--muted); pointer-events: none; }
+.filter-search .inp { padding-left: 34px; }
+.filter-search .icon-btn { position: absolute; right: 6px; bottom: 5px; }
+/* the rename pencil stays out of the way until the row is hovered */
+.tbl .icon-btn.rename { opacity: 0; transition: opacity 0.12s; }
+.tbl tr:hover .icon-btn.rename, .tbl .icon-btn.rename:focus-visible { opacity: 1; }
+
+/* ------------------------------ dashboard bands ---------------------------- */
+
+.kpis {
+  display: grid; grid-template-columns: minmax(280px, 1.25fr) repeat(2, minmax(200px, 1fr));
+  gap: 16px; margin-bottom: 20px;
+}
+.kpi {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 16px 18px;
+}
+.kpi-lab {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted);
+}
+.kpi-val { font-size: 40px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; margin-top: 4px; }
+.kpi-val .u { font-size: 20px; font-weight: 700; color: var(--muted); letter-spacing: 0; }
+.kpi-note { font-size: 12.5px; color: var(--ink-2); margin-top: 5px; line-height: 1.5; }
+
+/* the lead tile carries the colour of the worst thing open */
+.kpi.lead { border-left: 5px solid var(--line); }
+.kpi.lead.good { border-left-color: var(--good); background: linear-gradient(120deg, #f4fbf4, #fff 55%); }
+.kpi.lead.good .kpi-val { color: var(--good); }
+.kpi.lead.serious { border-left-color: var(--serious); background: linear-gradient(120deg, #fff6f1, #fff 55%); }
+.kpi.lead.serious .kpi-val { color: #b2551f; }
+.kpi.lead.critical { border-left-color: var(--critical); background: linear-gradient(120deg, #fef4f4, #fff 55%); }
+.kpi.lead.critical .kpi-val { color: var(--critical); }
+
+.section-hd {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 4px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.section-hd h2 { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
+
+@media (max-width: 900px) { .kpis { grid-template-columns: 1fr; } }

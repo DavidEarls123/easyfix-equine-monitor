@@ -5,6 +5,7 @@ import Icon from "../components/Icons";
 import { Card, Coat, Empty, Field, Modal, Pill, Tabs } from "../components/ui";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
+import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 
@@ -111,11 +112,33 @@ export default function Animals({ snap }) {
                           <Pill tone="flat">Unassigned</Pill>
                         )}
                       </td>
-                      <td className="nums">{t ? (t.offline ? <Pill tone="critical">No data</Pill> : `${t.intakeL} L`) : "—"}</td>
                       <td className="nums">
-                        {t?.tempNow == null ? "—" : <Pill tone={t.tempNow > s.tempMax || t.tempNow < s.tempMin ? "warning" : "good"}>{t.tempNow}°C</Pill>}
+                        {t ? (
+                          <Pill tone={waterStatus(t, s).tone} title={waterStatus(t, s).hint}>
+                            {t.offline ? "No data" : `${t.intakeL} L`}
+                          </Pill>
+                        ) : (
+                          "—"
+                        )}
                       </td>
-                      <td className="nums">{t ? <Pill tone={t.airNow < s.airMin ? "warning" : "good"}>{t.airNow}%</Pill> : "—"}</td>
+                      <td className="nums">
+                        {t?.tempNow == null ? (
+                          "—"
+                        ) : (
+                          <Pill tone={tempStatus(t.tempNow, s).tone} title={tempStatus(t.tempNow, s).hint}>
+                            {t.tempNow}°C
+                          </Pill>
+                        )}
+                      </td>
+                      <td className="nums">
+                        {t ? (
+                          <Pill tone={airStatus(t.airNow, s, t.nh3Now).tone} title={airStatus(t.airNow, s, t.nh3Now).hint}>
+                            {t.airNow}%
+                          </Pill>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>
                         <div className="row" style={{ gap: 6, justifyContent: "center" }}>
                           <button className="icon-btn" title="Add a note" onClick={() => setNoting(animal)}>
