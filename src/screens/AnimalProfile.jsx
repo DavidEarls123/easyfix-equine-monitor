@@ -13,6 +13,8 @@ import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 import { stallAlerts, stallState } from "../lib/insights";
+import { welfareIndex, welfareTrend } from "../lib/score";
+import { WelfareBreakdown, WelfareRing, WelfareTrend } from "../components/Welfare";
 import { BEHAVIOUR, DAY_MS, behaviourDay, cameraEvents, dayReadings, startOfDay } from "../lib/sim";
 
 const TONE = { good: "#0ca30c", warning: "#fab219", serious: "#ec835a", critical: "#d03b3b", flat: "#9fb6cb" };
@@ -44,6 +46,14 @@ export default function AnimalProfile({ id }) {
   }, [stall, animal, now]);
 
   const events = st ? cameraEvents(stall, animal, startOfDay(now)).filter((e) => e.at <= now).reverse() : [];
+
+  // the index, and the six days behind it — replaying a week of a whole yard
+  // is expensive, but one horse on its own profile is cheap
+  const welfare = useMemo(() => (st ? welfareIndex(world, stall, animal, now, st) : null), [world, stall, animal, now, st]);
+  const trend = useMemo(
+    () => (st && welfare ? welfareTrend(world, stall, animal, now, welfare.score) : null),
+    [world, stall, animal, now, st, welfare]
+  );
 
   return (
     <>
@@ -83,6 +93,24 @@ export default function AnimalProfile({ id }) {
           </button>
         </div>
       </div>
+
+      {stall && welfare && (
+        <Card
+          title="Welfare index"
+          sub="Every sensor and camera input on this horse, weighted into one score"
+          style={{ marginBottom: 16 }}
+        >
+          <div className="welfare-head">
+            <div className="welfare-head-score">
+              <WelfareRing welfare={welfare} size={112} />
+              {trend && <div style={{ marginTop: 12 }}><WelfareTrend trend={trend} width={140} /></div>}
+            </div>
+            <div className="grow" style={{ minWidth: 0 }}>
+              <WelfareBreakdown welfare={welfare} />
+            </div>
+          </div>
+        </Card>
+      )}
 
       {alerts.length > 0 && (
         <Card title="Open on this horse" style={{ marginBottom: 16 }}>

@@ -8,8 +8,10 @@
 
 import { REGISTRY, byName } from "./registry";
 import { noise, between } from "./sim";
+import { DEFAULT_WEIGHTS } from "./score";
+import { DEFAULT_PASSPORT } from "./passport";
 
-export const VERSION = 3;
+export const VERSION = 5;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -34,6 +36,11 @@ export const DEFAULT_SETTINGS = {
   intakeLowPct: 70,
   noDrinkHours: 6,
   camera: { identify: true, behaviour: true, minConfidence: 90, retentionDays: 14 },
+  // how the welfare index is weighted — normalised at read time, so these
+  // are relative to each other rather than required to total anything
+  weights: { ...DEFAULT_WEIGHTS },
+  // which external index profile creation searches
+  passport: { ...DEFAULT_PASSPORT },
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
 };
 

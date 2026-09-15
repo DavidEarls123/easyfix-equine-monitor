@@ -6,10 +6,11 @@
    Manual entry is the fallback for anything the index does not hold.
    ========================================================================== */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../components/Icons";
 import { Coat, Field, Modal, Pill } from "../components/ui";
-import { REGISTRY_SOURCE, ageOf, searchRegistry } from "../lib/registry";
+import { ageOf } from "../lib/registry";
+import { DEFAULT_PASSPORT, searchPassports, sourceLabel } from "../lib/passport";
 import { animalFromRecord } from "../lib/world";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
@@ -44,7 +45,44 @@ export default function AddAnimal({ onClose, presetStallId }) {
   const [stallId, setStallId] = useState(presetStallId || "");
   const [note, setNote] = useState("");
 
-  const hits = useMemo(() => searchRegistry(q), [q]);
+  const cfg = { ...DEFAULT_PASSPORT, ...(world.settings.passport || {}) };
+  const source = sourceLabel(cfg);
+  const [hits, setHits] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const seq = useRef(0);
+
+  // a live provider is a network call, so the search is debounced and the
+  // response is dropped if a newer keystroke has already gone out
+  useEffect(() => {
+    const query = q.trim();
+    if (query.length < 2) {
+      setHits([]);
+      setErr(null);
+      setBusy(false);
+      return;
+    }
+    const mine = ++seq.current;
+    setBusy(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { records, warning } = await searchPassports(query, cfg);
+        if (seq.current !== mine) return;
+        setHits(records);
+        // a fallback is not an error, but the operator should know the names
+        // in front of them did not come from the provider they configured
+        setErr(warning ? `${warning} Showing the simulated index instead.` : null);
+      } catch (e) {
+        if (seq.current !== mine) return;
+        setHits([]);
+        setErr(e.message || "Lookup failed");
+      } finally {
+        if (seq.current === mine) setBusy(false);
+      }
+    }, 260);
+    return () => clearTimeout(timer);
+  }, [q, world.settings.passport]);
+
   const taken = new Set(world.animals.map((a) => a.name.toLowerCase()));
 
   const free = world.stalls
@@ -99,12 +137,21 @@ export default function AddAnimal({ onClose, presetStallId }) {
     >
       {step === 1 ? (
         <>
-          <Field label="Search the passport index" hint={`Name, microchip, sire or dam · source: ${REGISTRY_SOURCE}`}>
+          <Field label="Search the passport index" hint={`Name, microchip, sire or dam · source: ${source}`}>
             <input className="inp" autoFocus placeholder="e.g. Ndaawi, Walk In The Park, 985…" value={q} onChange={(e) => setQ(e.target.value)} />
           </Field>
           <div style={{ marginTop: 12, maxHeight: 330, overflowY: "auto" }}>
-            {q.trim().length < 2 && <div className="small mute">Start typing to search {REGISTRY_SOURCE.split("(")[0].trim()}.</div>}
-            {q.trim().length >= 2 && hits.length === 0 && (
+            {q.trim().length < 2 && <div className="small mute">Start typing to search {source.split("(")[0].trim()}.</div>}
+            {busy && <div className="small mute">Searching {source.split("(")[0].trim()}…</div>}
+            {err && (
+              <div className="small" style={{ color: "#a92c2c", lineHeight: 1.6 }}>
+                {err}
+                <div className="hint" style={{ marginTop: 4 }}>
+                  Settings → Passport database, or enter the horse by hand below.
+                </div>
+              </div>
+            )}
+            {!busy && !err && q.trim().length >= 2 && hits.length === 0 && (
               <div className="small mute">No match. You can still enter the horse by hand.</div>
             )}
             {hits.map((r) => {

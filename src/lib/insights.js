@@ -8,6 +8,7 @@
 
 import { today, trailing, cameraEvents, behaviourAt, identityCheck, dayKey, startOfDay, DAY_MS, HOUR_MS } from "./sim";
 import { animalOf, stallsOf } from "./world";
+import { yardWelfare } from "./score";
 
 export const RANK = { critical: 0, serious: 1, warning: 2, good: 3, info: 4 };
 export const bySeverity = (a, b) => RANK[a.severity] - RANK[b.severity] || b.ts - a.ts;
@@ -382,9 +383,12 @@ export function yardSnapshot(world, now) {
     }));
 
   const visible = alerts.filter((a) => world.alertState?.[a.id] !== "dismissed").sort(bySeverity);
+  // one welfare index per occupied box, and the yard average behind it
+  const welfare = yardWelfare(live, world, now);
   return {
     now,
     rolls,
+    welfare,
     alerts: visible,
     allAlerts: alerts,
     counts: {

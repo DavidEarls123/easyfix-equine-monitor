@@ -4,7 +4,8 @@
 import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import { Card, Coat, Pill, Tile, ago } from "../components/ui";
-import AlertList from "../components/AlertList";
+import AttentionList from "../components/AttentionList";
+import { WelfareBar, WelfareRing } from "../components/Welfare";
 import { BarChart, C, LineChart, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
@@ -76,6 +77,16 @@ export default function Dashboard({ snap }) {
           note={`${snap.counts.critical} critical · ${snap.counts.serious} to look at · ${snap.counts.warning} to watch`}
         />
         <Tile
+          kind="welfare"
+          label="Welfare index"
+          value={snap.welfare.average ?? "—"}
+          note={
+            snap.welfare.average != null
+              ? `yard average across ${snap.welfare.scored.length} monitored horses`
+              : "no monitored horses yet"
+          }
+        />
+        <Tile
           kind="water"
           label="Water intake"
           value={snap.intakePct}
@@ -95,14 +106,20 @@ export default function Dashboard({ snap }) {
         <div className="grid">
           <Card
             title="Needs attention"
-            sub="Ranked by severity — each one says what to do next"
+            sub="One card per horse — every finding on that animal, worst first"
             right={
               <button className="btn sm" onClick={() => go("alerts")}>
                 Show all ({snap.alerts.length})
               </button>
             }
           >
-            <AlertList alerts={critical.length ? critical : snap.alerts} now={now} limit={4} empty="Everything is inside its limits." />
+            <AttentionList
+              alerts={critical.length ? critical : snap.alerts}
+              snap={snap}
+              now={now}
+              limit={4}
+              empty="Everything is inside its limits."
+            />
           </Card>
 
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -148,6 +165,28 @@ export default function Dashboard({ snap }) {
         </div>
 
         <div className="grid">
+          <Card title="Lowest welfare index" sub="The horses carrying the most, whether or not they have tripped a threshold">
+            {snap.welfare.lowest.length === 0 && <div className="small mute">No monitored horses yet.</div>}
+            {snap.welfare.lowest.map((x) => (
+              <button
+                key={x.stall.id}
+                className="alert-row"
+                style={{ width: "100%", textAlign: "left", cursor: "pointer", background: "#fff" }}
+                onClick={() => go(`animal/${x.animal.id}`)}
+              >
+                <Coat animal={x.animal} size={30} />
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="row" style={{ gap: 8 }}>
+                    <b>{x.animal.name}</b>
+                    <span className="tiny mute">{x.stall.name}</span>
+                  </div>
+                  <div className="why">{x.welfare.weakest ? `${x.welfare.weakest.label.toLowerCase()} — ${x.welfare.weakest.why}` : ""}</div>
+                </div>
+                <WelfareBar welfare={x.welfare} width={54} />
+              </button>
+            ))}
+          </Card>
+
           <Card title="Barn health" sub="Tap a barn for its boxes">
             {snap.rolls.map((r) => (
               <button

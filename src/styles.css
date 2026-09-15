@@ -65,7 +65,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   background: linear-gradient(180deg, #0c2340 0%, #10315a 60%, #0b2745 100%);
   color: #fff; display: flex; flex-direction: column; z-index: 30;
 }
-.rail-logo { padding: 20px 18px 14px; }
+.rail-logo { padding: 18px 16px 14px; display: flex; justify-content: center; }
 .rail-nav { padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
 .rail-item {
   display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 10px;
@@ -79,7 +79,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   margin-left: auto; background: var(--critical); color: #fff; border-radius: 20px;
   font-size: 11px; padding: 1px 7px; font-weight: 700;
 }
-.rail-jockey { margin-top: auto; opacity: 0.95; pointer-events: none; }
+/* the jumping horse sits centred in the navy, clear of the last nav item */
+/* the mark sits centred in the navy, clear of the last nav item */
+.rail-mark {
+  margin-top: auto; padding: 24px 18px 28px; display: flex;
+  align-items: center; justify-content: center; pointer-events: none;
+}
 
 .main { flex: 1; margin-left: var(--rail); display: flex; flex-direction: column; min-width: 0; }
 
@@ -362,7 +367,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 
 @media (max-width: 1080px) {
   :root { --rail: 64px; }
-  .rail-item span.lbl, .rail-logo .wordmark, .rail-jockey { display: none; }
+  .rail-item span.lbl, .rail-logo .wordmark, .rail-mark { display: none; }
   .rail-item { justify-content: center; padding: 11px 0; }
   .rail-item.sub { padding-left: 0; }
   .page { padding: 18px 14px 48px; }
@@ -387,3 +392,55 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   .tiles { grid-template-columns: 1fr 1fr; }
   .page-hd .hd-actions { width: 100%; }
 }
+
+/* ------------------------------- welfare index ------------------------------ */
+
+.welfare-parts { display: grid; gap: 10px; }
+.welfare-part { display: flex; gap: 10px; align-items: flex-start; }
+.welfare-part .ico {
+  display: grid; place-items: center; border-radius: 8px; flex: none; margin-top: 1px;
+}
+.meter {
+  display: block; height: 6px; border-radius: 4px; background: #e6eef8;
+  overflow: hidden; margin-top: 5px;
+}
+.meter > span { display: block; height: 100%; border-radius: 4px; }
+
+/* the horse is the subject of an attention card, the issues sit under it */
+.attn { display: grid; gap: 12px; }
+.attn-card {
+  border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden;
+}
+.attn-card.critical { border-color: #f0c3c3; }
+.attn-card.serious { border-color: #f5d3c4; }
+.attn-card.warning { border-color: #f6e3b4; }
+.attn-hd {
+  display: flex; gap: 14px; align-items: center; padding: 13px 14px;
+  background: linear-gradient(180deg, #fbfdff, #f3f8fe); border-bottom: 1px solid var(--line);
+  width: 100%; text-align: left; cursor: pointer; border: 0; border-bottom: 1px solid var(--line);
+}
+.attn-hd:hover { background: linear-gradient(180deg, #f6fafe, #eaf3fd); }
+.attn-who { min-width: 0; flex: 1; }
+.attn-who .nm { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.attn-who .sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.attn-issues { padding: 4px 14px 12px; display: grid; gap: 2px; }
+.attn-issue {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 0;
+  border-top: 1px dashed var(--line);
+}
+.attn-issue:first-child { border-top: 0; }
+.attn-issue .ico { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; flex: none; }
+.attn-issue .ttl { font-weight: 700; font-size: 13.5px; }
+.attn-more { padding: 0 14px 12px; }
+
+.rng { width: 100%; accent-color: var(--blue); height: 22px; cursor: pointer; }
+.attn-still {
+  width: 138px; height: 78px; border-radius: 10px; overflow: hidden; flex: none;
+  background: #0d1a26; display: block; border: 1px solid rgba(12,43,82,0.18);
+}
+.attn-still canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tile.welfare { --tile: var(--air); }
+
+.welfare-head { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+.welfare-head-score { flex: none; display: grid; place-items: center; }
+@media (max-width: 720px) { .welfare-head { gap: 14px; } }

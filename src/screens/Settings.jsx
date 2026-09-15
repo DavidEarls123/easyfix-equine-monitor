@@ -3,7 +3,10 @@
 
 import { useState } from "react";
 import Icon from "../components/Icons";
-import { Card, Field, Modal, Switch } from "../components/ui";
+import { Card, Field, Modal, Pill, Switch } from "../components/ui";
+import { WelfareRing } from "../components/Welfare";
+import { COMPONENTS, DEFAULT_WEIGHTS, normalise } from "../lib/score";
+import { DEFAULT_PASSPORT, PROVIDERS, testProvider } from "../lib/passport";
 import { useWorld } from "../lib/store";
 import { bigYard } from "../lib/world";
 
@@ -105,6 +108,20 @@ export default function Settings({ snap }) {
           </div>
         </Card>
 
+        <Card
+          title="Welfare index"
+          sub="How the sensors and the camera are weighted into one score per horse"
+        >
+          <WeightEditor snap={snap} />
+        </Card>
+
+        <Card
+          title="Passport database"
+          sub="Where profile creation looks a horse up, instead of typing a passport in"
+        >
+          <PassportEditor />
+        </Card>
+
         <Card title="Who gets told">
           <div className="grid" style={{ gap: 12 }}>
             <Switch on={s.notify.push} label="Push to the yard phones" onChange={(v) => actions.setSettings({ notify: { ...s.notify, push: v } })} />
@@ -187,5 +204,189 @@ export default function Settings({ snap }) {
         </Modal>
       )}
     </>
+  );
+}
+
+/* ---------------------------- the welfare weights -------------------------- */
+
+/**
+ * Weights are relative, not absolute: whatever the sliders say is normalised
+ * before it is used, so the yard can pull one input up without having to take
+ * the same amount off another. The effective share is shown alongside.
+ */
+function WeightEditor({ snap }) {
+  const { world, actions, say } = useWorld();
+  const weights = { ...DEFAULT_WEIGHTS, ...(world.settings.weights || {}) };
+  const share = normalise(weights);
+
+  // the yard's own numbers, rescored live as the sliders move
+  const sample = snap.welfare?.average;
+
+  const set = (key, value) =>
+    actions.setSettings({ weights: { ...weights, [key]: Math.max(0, Number(value) || 0) } });
+
+  return (
+    <div className="grid" style={{ gap: 14 }}>
+      <div className="row" style={{ gap: 14, alignItems: "center" }}>
+        {sample != null && (
+          <WelfareRing welfare={{ score: sample, band: bandFor(sample) }} size={66} />
+        )}
+        <div className="small mute" style={{ lineHeight: 1.65 }}>
+          One 0–100 score per horse, from every input the box has. An input with no data is dropped and the rest are
+          reweighted, so a failed flow meter lowers confidence rather than the score.
+          {sample != null && <> The yard is averaging <b className="nums">{sample}</b> right now.</>}
+        </div>
+      </div>
+
+      {COMPONENTS.map((c) => (
+        <div key={c.key}>
+          <div className="row" style={{ gap: 8, marginBottom: 2 }}>
+            <Icon name={c.icon} size={14} style={{ color: "var(--ink-2)" }} />
+            <b style={{ fontSize: 13 }}>{c.label}</b>
+            <span className="nums tiny mute" style={{ marginLeft: "auto" }}>
+              weight {weights[c.key]} · <b>{Math.round(share[c.key] * 100)}%</b> of the score
+            </span>
+          </div>
+          <input
+            type="range"
+            className="rng"
+            min="0"
+            max="40"
+            step="1"
+            value={weights[c.key]}
+            onChange={(e) => set(c.key, e.target.value)}
+            aria-label={`${c.label} weight`}
+          />
+          <div className="hint">{c.hint}</div>
+        </div>
+      ))}
+
+      <div className="row">
+        <button
+          className="btn"
+          onClick={() => {
+            actions.setSettings({ weights: { ...DEFAULT_WEIGHTS } });
+            say("Weights reset");
+          }}
+        >
+          <Icon name="refresh" size={15} /> Reset to defaults
+        </button>
+        <Pill tone="flat">Set a weight to 0 to take an input out entirely</Pill>
+      </div>
+    </div>
+  );
+}
+
+const bandFor = (score) =>
+  score >= 85
+    ? { tone: "good", label: "Settled" }
+    : score >= 70
+    ? { tone: "warning", label: "Watch" }
+    : score >= 55
+    ? { tone: "serious", label: "Needs attention" }
+    : { tone: "critical", label: "Urgent" };
+
+/* --------------------------- the passport provider ------------------------- */
+
+function PassportEditor() {
+  const { world, actions, say } = useWorld();
+  const cfg = { ...DEFAULT_PASSPORT, ...(world.settings.passport || {}) };
+  const p = PROVIDERS[cfg.provider] || PROVIDERS.simulated;
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const set = (patch) => {
+    actions.setSettings({ passport: { ...cfg, ...patch } });
+    setResult(null);
+  };
+
+  const run = async () => {
+    setTesting(true);
+    setResult(null);
+    const r = await testProvider(cfg);
+    setResult(r);
+    setTesting(false);
+    say(r.ok ? "Lookup succeeded" : "Lookup failed");
+  };
+
+  return (
+    <div className="grid" style={{ gap: 12 }}>
+      <Field label="Provider" hint={p.blurb}>
+        <select className="inp" value={cfg.provider} onChange={(e) => set({ provider: e.target.value, baseUrl: PROVIDERS[e.target.value]?.defaultUrl ?? "" })}>
+          {Object.values(PROVIDERS).map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      {p.needsUrl && (
+        <Field
+          label="Base URL"
+          hint="Point this at a service of your own that holds the credential and forwards the query."
+        >
+          <input
+            className="inp"
+            placeholder="https://passports.your-yard.com/api"
+            value={cfg.baseUrl}
+            onChange={(e) => set({ baseUrl: e.target.value })}
+          />
+        </Field>
+      )}
+
+      {p.needsKey && (
+        <>
+          <Field label="API key" hint="Only sent when the direct-from-browser switch below is on.">
+            <input
+              className="inp"
+              type="password"
+              placeholder="held by your proxy, normally"
+              value={cfg.apiKey}
+              onChange={(e) => set({ apiKey: e.target.value })}
+            />
+          </Field>
+          <Switch
+            on={cfg.directBrowser}
+            label="Call the provider straight from the browser"
+            onChange={(v) => set({ directBrowser: v })}
+          />
+          {cfg.directBrowser && (
+            <div className="small" style={{ color: "#a9701a", lineHeight: 1.65 }}>
+              A key in a browser bundle is a published key, and most of these hosts will refuse a cross-origin request
+              anyway. Use it to try a provider out, not to run a yard on.
+            </div>
+          )}
+        </>
+      )}
+
+      <Switch
+        on={cfg.fallbackToSimulated}
+        label="Fall back to the simulated index if a lookup fails"
+        onChange={(v) => set({ fallbackToSimulated: v })}
+      />
+
+      <div className="row" style={{ gap: 10 }}>
+        <button className="btn" onClick={run} disabled={testing}>
+          <Icon name="refresh" size={15} /> {testing ? "Testing…" : "Test connection"}
+        </button>
+        {p.docs && (
+          <a className="btn ghost sm" href={p.docs} target="_blank" rel="noreferrer noopener">
+            Provider docs
+          </a>
+        )}
+      </div>
+
+      {result && (
+        <div className="small" style={{ color: result.ok ? "#0a7d0a" : "#a92c2c", lineHeight: 1.65 }}>
+          {result.message}
+        </div>
+      )}
+
+      <div className="hint" style={{ lineHeight: 1.7 }}>
+        Racing Post has no self-serve API — its data is licensed commercially, so point <b>Custom endpoint</b> at the feed
+        they give you. The Racing API is the closest subscription you can sign up for on your own.
+      </div>
+    </div>
   );
 }

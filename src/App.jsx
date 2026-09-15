@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import Icon, { Jockey, Wordmark } from "./components/Icons";
+import Icon from "./components/Icons";
+import { RailMark, Wordmark } from "./components/Brand";
 import { useWorld } from "./lib/store";
 import { go, useRoute } from "./lib/router";
 import { yardSnapshot } from "./lib/insights";
@@ -76,8 +77,8 @@ export default function App() {
             </div>
           ))}
         </div>
-        <div className="rail-jockey">
-          <Jockey />
+        <div className="rail-mark">
+          <RailMark />
         </div>
       </nav>
 

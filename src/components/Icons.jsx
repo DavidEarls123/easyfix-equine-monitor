@@ -3,8 +3,8 @@
 const P = {
   dashboard: "M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z",
   yard: "M3 21V9l9-6 9 6v12M3 13h18M9 21v-8h6v8",
+  horse: "M3.2 8.6c.3 1.3.9 2.2 1.8 2.9M4.6 13c-.5 3.4-1.6 4.4-2.4 6.6M8 14.4c-.4 3.2-1.4 4.2-2.1 5.9M3.8 13.1C3 9.2 6 6.3 9.9 6.9c2 .3 3.7 1.6 5.3 3.3l5.6-2M15.2 13l2.6 1.9-2.6 1.9M11.9 14.1l2.6 1.9-2.6 1.9",
   barn: "M4 21V10l8-5 8 5v11M9 21v-6h6v6M4 14h16",
-  horse: "M5 21c0-5 2-8 6-9l1-4 3-3 2 2-1 3 3 2v4c0 4-3 5-3 8M8 12l-3 2",
   video: "m16 10 5-3v10l-5-3v-4ZM3 7h13v10H3z",
   bell: "M18 15V10a6 6 0 1 0-12 0v5l-2 3h16l-2-3ZM10 21h4",
   settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-3 2-1-2-4-2 .8-2-1.2L15 4H9l-1 2.6-2 1.2L4 7 2 11l2 1v0l-2 1 2 4 2-.8 2 1.2L9 20h6l1-2.6 2-1.2 2 .8 2-4-2-1Z",
@@ -54,60 +54,6 @@ export default function Icon({ name, size = 18, stroke = 1.8, style, className }
       focusable="false"
     >
       <path d={d} />
-    </svg>
-  );
-}
-
-/** The EASYFIX wordmark, redrawn rather than shipped as an asset. */
-export function Wordmark({ compact = false }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-      <div
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: 7,
-          background: "linear-gradient(160deg,#e23b3b,#b81f1f)",
-          color: "#fff",
-          display: "grid",
-          placeItems: "center",
-          fontWeight: 800,
-          fontSize: 18,
-          letterSpacing: "-0.04em",
-          flex: "none",
-        }}
-      >
-        E
-      </div>
-      {!compact && (
-        <div className="wordmark" style={{ lineHeight: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: "0.08em" }}>EASYFIX</div>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.42em", color: "#8fb4dc", marginTop: 3 }}>EQUINE</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** The watermark at the foot of the EASYFIX rail. */
-export function Jockey({ width = 150 }) {
-  return (
-    <svg viewBox="0 0 120 130" width={width} height={width * 1.08} aria-hidden="true" style={{ opacity: 0.5 }}>
-      <path
-        d="M60 12c22 0 38 17 38 40 0 13-5 22-9 31-3 8-4 14-4 22 0 6-4 10-10 10s-10-4-10-10c0-12 2-19 6-28 4-9 7-16 7-25 0-11-8-19-18-19s-18 8-18 19c0 9 3 16 7 25 4 9 6 16 6 28 0 6-4 10-10 10s-10-4-10-10c0-8-1-14-4-22-4-9-9-18-9-31 0-23 16-40 38-40z"
-        fill="none"
-        stroke="#3d8ce0"
-        strokeWidth="9"
-        strokeLinecap="round"
-      />
-      <g fill="#3d8ce0">
-        <circle cx="31" cy="46" r="3.4" />
-        <circle cx="89" cy="46" r="3.4" />
-        <circle cx="28" cy="64" r="3.4" />
-        <circle cx="92" cy="64" r="3.4" />
-        <circle cx="29" cy="82" r="3.4" />
-        <circle cx="91" cy="82" r="3.4" />
-      </g>
     </svg>
   );
 }
