@@ -7,6 +7,7 @@ import { Card, Field, Modal, Pill, Switch } from "../components/ui";
 import { WelfareRing } from "../components/Welfare";
 import { COMPONENTS, DEFAULT_WEIGHTS, normalise } from "../lib/score";
 import { DEFAULT_PASSPORT, PROVIDERS, testProvider } from "../lib/passport";
+import { DEFAULT_BASELINE } from "../lib/baseline";
 import { useWorld } from "../lib/store";
 import { bigYard } from "../lib/world";
 
@@ -120,6 +121,13 @@ export default function Settings({ snap }) {
           sub="Where profile creation looks a horse up, instead of typing a passport in"
         >
           <PassportEditor />
+        </Card>
+
+        <Card
+          title="Learning each horse"
+          sub="Water and movement are judged against the animal's own history, not a yard average"
+        >
+          <BaselineEditor snap={snap} />
         </Card>
 
         <Card title="Who gets told">
@@ -386,6 +394,88 @@ function PassportEditor() {
       <div className="hint" style={{ lineHeight: 1.7 }}>
         Racing Post has no self-serve API — its data is licensed commercially, so point <b>Custom endpoint</b> at the feed
         they give you. The Racing API is the closest subscription you can sign up for on your own.
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- what is normal per animal ----------------------- */
+
+function BaselineEditor({ snap }) {
+  const { world, actions, say } = useWorld();
+  const cfg = { ...DEFAULT_BASELINE, ...(world.settings.baseline || {}) };
+  const set = (patch) => actions.setSettings({ baseline: { ...cfg, ...patch } });
+
+  // how much of the yard the app actually has an opinion about yet
+  const scored = snap.welfare?.scored || [];
+  const learned = scored.filter((x) => x.welfare?.baseline?.ready).length;
+  const learning = scored.length - learned;
+
+  const num = (key, label, hint, min, max, step = 1) => (
+    <Field label={label} hint={hint}>
+      <input
+        className="inp nums"
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={cfg[key]}
+        onChange={(e) => set({ [key]: Number(e.target.value) })}
+      />
+    </Field>
+  );
+
+  return (
+    <div className="grid" style={{ gap: 12 }}>
+      <Switch
+        on={cfg.personalise}
+        label="Judge water and movement against each horse's own baseline"
+        onChange={(v) => set({ personalise: v })}
+      />
+      <div className="small mute" style={{ lineHeight: 1.65 }}>
+        Box temperature and air quality stay on the yard thresholds above — those are properties of the building, and
+        28°C is too warm whichever horse is standing in it. Intake and movement are not: they are learned per animal, so
+        a 55 L eventer dropping to 38 L is flagged while a 22 L pony sitting at its usual 22 L is left alone.
+      </div>
+
+      {cfg.personalise && (
+        <>
+          <div className="row" style={{ gap: 8 }}>
+            <Pill tone={learned ? "good" : "flat"}>{learned} learned</Pill>
+            {learning > 0 && <Pill tone="warning">{learning} still learning</Pill>}
+          </div>
+
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {num("windowDays", "Look back (days)", "How far the learned normal reaches", 7, 90)}
+            {num("minDays", "Days before trusting it", "Until then the yard goal is used", 3, 30)}
+            {num("sensitivity", "Flag at (std devs)", "Lower catches more, and cries wolf more", 1, 4, 0.25)}
+          </div>
+
+          <Switch
+            on={cfg.tempAdjust}
+            label="Expect more water when the box is warm"
+            onChange={(v) => set({ tempAdjust: v })}
+          />
+          {cfg.tempAdjust && num("tempPerDegree", "Extra intake expected (% per °C)", "Above the horse's own usual box temperature", 0, 15)}
+
+          <div className="hint" style={{ lineHeight: 1.7 }}>
+            The baseline is a median and a median absolute deviation rather than a mean and a standard deviation, so one
+            bad day does not quietly raise the bar for the next one. Days when the meter was offline are left out
+            entirely rather than counted as zero.
+          </div>
+        </>
+      )}
+
+      <div className="row">
+        <button
+          className="btn"
+          onClick={() => {
+            set({ ...DEFAULT_BASELINE });
+            say("Learning settings reset");
+          }}
+        >
+          <Icon name="refresh" size={15} /> Reset to defaults
+        </button>
       </div>
     </div>
   );

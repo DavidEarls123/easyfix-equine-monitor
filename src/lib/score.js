@@ -19,6 +19,7 @@
    ========================================================================== */
 
 import { cameraEvents, startOfDay, DAY_MS, dayReadings, today, trailing } from "./sim";
+import { intakeDeviation, learnedBaseline } from "./baseline";
 
 /** What the index is built from, and what each part is called on screen. */
 export const COMPONENTS = [
@@ -89,20 +90,36 @@ const round = (v) => Math.round(v * 10) / 10;
  * `{ score, why }` — `why` being the one line the profile shows under the bar.
  */
 
-function hydrationScore(t, past, s) {
+function hydrationScore(t, past, s, baseline, dev) {
   if (t.offline) return null; // no meter, no opinion
-  // pace is already normalised against the time of day, so 95% at 07:00 and
-  // 95% at 19:00 mean the same thing
-  const pace = clamp(((t.pctOfGoal - 40) / 55) * 100);
   const dry =
     t.hoursSinceDrink > s.noDrinkHours ? Math.min(30, (t.hoursSinceDrink - s.noDrinkHours) * 6) : 0;
-  // a horse that is down on its own normal matters more than one below a yard default
+
+  // Once the app has watched a horse long enough, its own history is a far
+  // better yardstick than a yard-wide goal — see lib/baseline.js.
+  if (dev && !dev.tooEarly) {
+    // a robust z of 0 is this horse's normal day; -2 is the edge of its band
+    const z = dev.z;
+    const score = clamp(z >= 0 ? 100 - Math.min(20, Math.max(0, z - 1.5) * 10) : 100 + z * 22 - dry);
+    const bits = [`${t.intakeL} L so far, tracking ${dev.pct}% of its own normal`];
+    // dev.expected is the temperature-adjusted expectation, not the raw median,
+    // so it is labelled as such — the profile shows the plain "usually N L"
+    if (dev.verdict !== "normal")
+      bits.push(`${dev.verdict} the ${dev.expected} L expected of it today${dev.adjusted ? " for how warm the box is" : ""}`);
+    else if (dev.adjusted) bits.push("expectation adjusted for box temperature");
+    if (dry) bits.push(`${Math.floor(t.hoursSinceDrink)} h since a drink`);
+    return { score, why: bits.join(" · "), personal: true };
+  }
+
+  // still learning, or too early in the day to project: fall back to the
+  // yard goal, and say so rather than implying a personal read
+  const pace = clamp(((t.pctOfGoal - 40) / 55) * 100);
   const drop = past.intakeL > 0 ? clamp((past.intakeL - t.intakeL) / past.intakeL, 0, 1) : 0;
   const score = clamp(pace - dry - drop * 25);
   const bits = [`${t.intakeL} L, ${t.pctOfGoal}% of pace`];
   if (dry) bits.push(`${Math.floor(t.hoursSinceDrink)} h since a drink`);
-  if (drop > 0.15) bits.push(`${Math.round(drop * 100)}% under its own average`);
-  return { score, why: bits.join(" · ") };
+  if (baseline?.learning) bits.push(`still learning this horse — ${baseline.needs} more days`);
+  return { score, why: bits.join(" · "), personal: false };
 }
 
 function climateScore(t, s) {
@@ -210,8 +227,11 @@ export function welfareIndex(world, stall, animal, now, pre) {
   const past = pre?.past || trailing(stall, animal, now, 6);
   const events = pre?.events || cameraEvents(stall, animal, startOfDay(now)).filter((e) => e.at <= now);
 
+  const baseline = s.baseline?.personalise === false ? null : learnedBaseline(world, stall, animal, now);
+  const dev = baseline ? intakeDeviation(t, baseline, t.tempNow) : null;
+
   const raw = {
-    hydration: hydrationScore(t, past, s),
+    hydration: hydrationScore(t, past, s, baseline, dev),
     climate: climateScore(t, s),
     air: airScore(t, s),
     behaviour: behaviourScore(events, s),
@@ -244,6 +264,8 @@ export function welfareIndex(world, stall, animal, now, pre) {
     band: bandOf(score),
     parts: parts.sort((a, b) => a.score - b.score), // worst first: that is the story
     missing,
+    baseline,
+    deviation: dev,
     // how much of the configured weight actually had data behind it
     confidence: Math.round(liveWeight * 100),
     weakest: parts[0] || null,

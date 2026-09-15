@@ -149,6 +149,26 @@ export function dayReadings(stall, animal, dayStart) {
   return cached(key, () => build(stall, animal, dayStart));
 }
 
+/**
+ * When a problem started, in days before today.
+ *
+ * A horse that has drunk half its water every day for a month is not a horse
+ * with a problem — it is a horse with a small appetite, and an app that learns
+ * each animal will rightly say so. The cases worth catching are the ones where
+ * something *changed*, so the intake and behaviour scenarios ramp in over the
+ * last few days rather than applying flatly to all of history.
+ */
+const ONSET = { lowIntake: 5, colic: 4 };
+
+/** 0 before the problem started, rising to 1 today. */
+function onsetRamp(scen, dayStart) {
+  const days = ONSET[scen];
+  if (days == null) return 1; // environmental scenarios are a standing condition
+  const ago = Math.round((startOfDay(Date.now()) - startOfDay(dayStart)) / DAY_MS);
+  if (ago > days) return 0;
+  return Math.max(0, Math.min(1, (days - ago + 1) / (days + 1)));
+}
+
 function build(stall, animal, dayStart) {
   const s = stall.seed || stall.id;
   const day = dayKey(dayStart);
@@ -158,8 +178,9 @@ function build(stall, animal, dayStart) {
   // How much this horse means to drink today, before the meter sees any of it.
   const goal = animal?.goalL || 35;
   let factor = between(`f|${s}|${day}`, 0.88, 1.12);
-  if (scen === "lowIntake") factor = between(`lf|${s}|${day}`, 0.38, 0.58);
-  if (scen === "colic") factor = between(`cf|${s}|${day}`, 0.5, 0.72);
+  const ramp = onsetRamp(scen, dayStart);
+  if (scen === "lowIntake") factor += (between(`lf|${s}|${day}`, 0.38, 0.58) - factor) * ramp;
+  if (scen === "colic") factor += (between(`cf|${s}|${day}`, 0.5, 0.72) - factor) * ramp;
   if (scen === "hot") factor *= 1.18;
 
   const hours = [];

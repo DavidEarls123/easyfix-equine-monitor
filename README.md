@@ -64,6 +64,57 @@ and behaviour switches, the welfare index weighting, the passport database the y
 searches, who gets told, and the demo controls (export the yard, add ten more barns
 of thirty boxes to see it at 300-stall scale, reset).
 
+## Learning each horse
+
+A fixed threshold is the right shape for the box and the wrong shape for the
+animal. A stall at 28°C is too warm whichever horse is standing in it, and 15 ppm
+of ammonia is bad air for all of them — temperature and air quality are properties
+of the building, so they stay on the yard-wide thresholds in Settings.
+
+Water intake and movement are not. A 16.2hh eventer in hard work and a retired pony
+on the same yard have daily intakes that differ threefold, so "below 70% of a 35 L
+goal" flags the pony every morning and misses the eventer losing a third of its
+normal. `lib/baseline.js` learns those two per animal and judges each horse against
+its own history instead.
+
+The baseline is a **median and a median absolute deviation**, not a mean and a
+standard deviation. A horse that colicked last Tuesday has one very low day in its
+window; a mean would be dragged down by it and a standard deviation inflated, so the
+next episode would have to be worse to trip the same threshold. The median ignores
+the outlier and the MAD barely moves, which keeps the baseline the horse's normal
+rather than its average including the bad days.
+
+Three rules keep it honest:
+
+- **Missing days are skipped, not zeroed.** A day the flow meter was dead is left
+  out of the window entirely.
+- **Nothing is judged personally until there is enough history.** Below `minDays`
+  (7 by default) the animal is `learning`, the yard goal carries the decision, and
+  the profile says so in those words rather than implying a personal read.
+- **A partial day is projected, not compared raw.** "9 L by 08:00" means nothing
+  without knowing how that horse drinks through a day, and the projection is not
+  trusted until enough of the day has elapsed to be worth projecting from.
+
+Intake expectation is also adjusted for how warm the box is, since horses drink more
+in heat — a tunable percentage per °C above the horse's own usual box temperature,
+switchable off, because it is an assumption rather than a measurement.
+
+The result is an alert that reads like the yard's own judgement: *"Wodhooh is
+drinking below its own normal — tracking about 19 L for the day. This horse normally
+drinks 30.2 L (usual range 23.1–37.3 L, learned over 21 days). That is 4.25 standard
+deviations below this horse."* The same horse sits inside the yard-wide threshold.
+
+Movement is treated the same way: active minutes a day, learned per animal, because
+a horse that goes quiet is often sore before it is visibly lame.
+
+### What this needed from the simulator
+
+Scenarios used to apply flatly to every day in history, which meant a "colic watch"
+horse had drunk half its goal every day for a month — and an app that learns each
+animal would rightly call that its normal and never flag it. The intake scenarios now
+**ramp in over the last few days**, so the demo shows what the feature is actually
+for: catching a change in an individual, not a number below a yard average.
+
 ## Reading a number
 
 `lib/status.js` is the one place that turns a reading into the word a yard would use

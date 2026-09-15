@@ -10,8 +10,9 @@ import { REGISTRY, byName } from "./registry";
 import { noise, between } from "./sim";
 import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
+import { DEFAULT_BASELINE } from "./baseline";
 
-export const VERSION = 5;
+export const VERSION = 7;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -41,6 +42,8 @@ export const DEFAULT_SETTINGS = {
   weights: { ...DEFAULT_WEIGHTS },
   // which external index profile creation searches
   passport: { ...DEFAULT_PASSPORT },
+  // how the app learns what is normal for each individual horse
+  baseline: { ...DEFAULT_BASELINE },
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
 };
 
@@ -140,6 +143,9 @@ const SCENARIO_POOL = [
   "lowIntake", "poorAir", "hot", "restless", "lameness", "sensorOffline", "cold",
 ];
 
+/** Demo horses arrived weeks or months ago, so they have history to learn from. */
+const joinedLongAgo = (seed) => Date.now() - Math.round(between(`joined|${seed}`, 45, 400)) * 86400000;
+
 export function animalFromRecord(rec, extra = {}) {
   return {
     id: uid("an_"),
@@ -221,7 +227,7 @@ export function seedWorld() {
   BARN1.forEach(([name, scenario], i) => {
     const rec = byName(name);
     if (!rec || !s1[i]) return;
-    const animal = animalFromRecord(rec, { scenario, goalL: 32 + Math.round(noise(`g|${name}`) * 8) });
+    const animal = animalFromRecord(rec, { scenario, goalL: 32 + Math.round(noise(`g|${name}`) * 8), joined: joinedLongAgo(name) });
     world.animals.push(animal);
     s1[i].animalId = animal.id;
   });
@@ -246,7 +252,7 @@ export function seedWorld() {
     for (let i = 0; i < count && p < pool.length; i++, p++) {
       const rec = pool[p];
       const scenario = SCENARIO_POOL[Math.floor(noise(`sc|${rec.name}`) * SCENARIO_POOL.length)];
-      const animal = animalFromRecord(rec, { scenario, goalL: 30 + Math.round(noise(`g|${rec.name}`) * 12) });
+      const animal = animalFromRecord(rec, { scenario, goalL: 30 + Math.round(noise(`g|${rec.name}`) * 12), joined: joinedLongAgo(rec.name) });
       world.animals.push(animal);
       stalls[i].animalId = animal.id;
     }
@@ -284,6 +290,7 @@ export function bigYard(world, barnCount = 10, perBarn = 30) {
         name: `${rec.name} ${String.fromCharCode(65 + (b % 26))}${i + 1}`,
         scenario,
         goalL: 30 + Math.round(noise(`g|${st.id}`) * 12),
+        joined: joinedLongAgo(st.id),
       });
       next.animals.push(animal);
       st.animalId = animal.id;

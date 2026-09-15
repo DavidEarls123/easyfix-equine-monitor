@@ -14,6 +14,7 @@ import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 import { stallAlerts, stallState } from "../lib/insights";
 import { welfareIndex, welfareTrend } from "../lib/score";
+import { activityDeviation, intakeDeviation, learnedBaseline } from "../lib/baseline";
 import { WelfareBreakdown, WelfareRing, WelfareTrend } from "../components/Welfare";
 import { BEHAVIOUR, DAY_MS, behaviourDay, cameraEvents, dayReadings, startOfDay } from "../lib/sim";
 
@@ -50,6 +51,12 @@ export default function AnimalProfile({ id }) {
   // the index, and the six days behind it — replaying a week of a whole yard
   // is expensive, but one horse on its own profile is cheap
   const welfare = useMemo(() => (st ? welfareIndex(world, stall, animal, now, st) : null), [world, stall, animal, now, st]);
+  const baseline = useMemo(
+    () => (st && world.settings.baseline?.personalise !== false ? learnedBaseline(world, stall, animal, now) : null),
+    [world, stall, animal, now, st]
+  );
+  const dev = useMemo(() => (baseline ? intakeDeviation(st.today, baseline, st.today.tempNow) : null), [baseline, st]);
+  const move = useMemo(() => (baseline ? activityDeviation(stall, animal, baseline, now) : null), [baseline, stall, animal, now]);
   const trend = useMemo(
     () => (st && welfare ? welfareTrend(world, stall, animal, now, welfare.score) : null),
     [world, stall, animal, now, st, welfare]
@@ -93,6 +100,16 @@ export default function AnimalProfile({ id }) {
           </button>
         </div>
       </div>
+
+      {stall && baseline && (
+        <Card
+          title={`What is normal for ${animal.name}`}
+          sub="Learned from this horse alone — water and movement are individual, the box is not"
+          style={{ marginBottom: 16 }}
+        >
+          <Baseline baseline={baseline} dev={dev} move={move} today={st.today} />
+        </Card>
+      )}
 
       {stall && welfare && (
         <Card
@@ -430,5 +447,91 @@ function EditModal({ animal, onClose, onRemove }) {
         </Field>
       </div>
     </Modal>
+  );
+}
+
+/* ------------------------- the horse's own baseline ------------------------ */
+
+function Baseline({ baseline, dev, move, today }) {
+  if (baseline.learning)
+    return (
+      <div className="learning">
+        <Icon name="clock" size={18} />
+        <div>
+          <b>Still learning this horse.</b>
+          <div className="small mute" style={{ marginTop: 3, lineHeight: 1.6 }}>
+            {baseline.days} clean {baseline.days === 1 ? "day" : "days"} on record
+            {baseline.skipped ? `, ${baseline.skipped} skipped for a dead meter` : ""} — {baseline.needs} more before
+            intake is judged against this animal rather than the yard goal. The yard thresholds are carrying it until
+            then.
+          </div>
+        </div>
+      </div>
+    );
+
+  const { intake } = baseline;
+  // where today sits inside the horse's own band
+  const span = Math.max(1, intake.hi - intake.lo);
+  const at = dev && !dev.tooEarly ? Math.max(0, Math.min(100, ((dev.projected - intake.lo) / span) * 100)) : null;
+  const tone = !dev || dev.tooEarly ? "flat" : dev.low ? "critical" : dev.high ? "warning" : "good";
+
+  return (
+    <div className="grid" style={{ gap: 14 }}>
+      <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+        <Pill tone="good">Learned from {baseline.days} days</Pill>
+        {baseline.skipped > 0 && <Pill tone="flat">{baseline.skipped} days skipped — meter offline</Pill>}
+        {dev?.adjusted && <Pill tone="flat">Adjusted for box temperature</Pill>}
+      </div>
+
+      <div>
+        <div className="row" style={{ gap: 8, marginBottom: 6 }}>
+          <b style={{ fontSize: 13 }}>Daily water</b>
+          <span className="small mute nums">
+            usually {intake.median} L · normal range {intake.lo}–{intake.hi} L
+          </span>
+          {dev && !dev.tooEarly && (
+            <span style={{ marginLeft: "auto" }}>
+              <Pill tone={tone}>
+                {dev.pct}% of normal
+                {dev.verdict !== "normal" ? ` · ${dev.verdict}` : ""}
+              </Pill>
+            </span>
+          )}
+        </div>
+
+        {/* the band this horse normally sits in, and where today is heading */}
+        <div className="band">
+          <span className="band-normal" />
+          {at != null && <span className="band-now" style={{ left: `${at}%` }} />}
+        </div>
+        <div className="row small mute nums" style={{ justifyContent: "space-between", marginTop: 4 }}>
+          <span>{intake.lo} L</span>
+          <span>
+            {dev && !dev.tooEarly
+              ? `${today.intakeL} L so far · tracking ${dev.projected} L`
+              : `${today.intakeL} L so far · too early in the day to project`}
+          </span>
+          <span>{intake.hi} L</span>
+        </div>
+      </div>
+
+      <div>
+        <div className="row" style={{ gap: 8, marginBottom: 6 }}>
+          <b style={{ fontSize: 13 }}>Daily movement</b>
+          <span className="small mute nums">usually {baseline.activity.activeMedian} active minutes</span>
+          {move && !move.tooEarly && (
+            <span style={{ marginLeft: "auto" }}>
+              <Pill tone={move.low ? "warning" : move.high ? "warning" : "good"}>
+                {move.projected} min projected · {move.verdict}
+              </Pill>
+            </span>
+          )}
+        </div>
+        <div className="hint">
+          Lying down usually {Math.round(baseline.activity.lyingMedian / 60)} h a day. A horse that goes quiet is often
+          sore before it is lame.
+        </div>
+      </div>
+    </div>
   );
 }

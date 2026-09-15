@@ -536,3 +536,21 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .section-hd h2 { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
 
 @media (max-width: 900px) { .kpis { grid-template-columns: 1fr; } }
+
+/* -------------------------- the learned normal band ------------------------ */
+
+.learning { display: flex; gap: 12px; align-items: flex-start; padding: 4px 0; color: var(--ink-2); }
+.learning > svg { color: var(--warning); flex: none; margin-top: 2px; }
+.band {
+  position: relative; height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, #f6d6d6, #fdf1d4 22%, #e8f6e9 42%, #e8f6e9 58%, #fdf1d4 78%, #f6d6d6);
+}
+.band-normal {
+  position: absolute; inset: 0 22%; border-radius: 4px;
+  border: 1px dashed rgba(12, 43, 82, 0.28);
+}
+.band-now {
+  position: absolute; top: -4px; width: 3px; height: 20px; border-radius: 2px;
+  background: var(--ink); transform: translateX(-1.5px);
+  box-shadow: 0 0 0 2px #fff;
+}

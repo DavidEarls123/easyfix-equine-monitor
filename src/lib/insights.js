@@ -9,6 +9,7 @@
 import { today, trailing, cameraEvents, behaviourAt, identityCheck, dayKey, startOfDay, DAY_MS, HOUR_MS } from "./sim";
 import { animalOf, stallsOf } from "./world";
 import { yardWelfare } from "./score";
+import { activityDeviation, intakeDeviation, learnedBaseline } from "./baseline";
 
 export const RANK = { critical: 0, serious: 1, warning: 2, good: 3, info: 4 };
 export const bySeverity = (a, b) => RANK[a.severity] - RANK[b.severity] || b.ts - a.ts;
@@ -25,12 +26,16 @@ export function stallState(world, stall, now) {
   const behaviour = animal ? behaviourAt(stall, animal, now) : null;
   const id = animal ? identityCheck(stall, animal, now) : null;
   const events = animal ? cameraEvents(stall, animal, startOfDay(now)).filter((e) => e.at <= now) : [];
-  return { stall, animal, today: t, past, behaviour, identity: id, events };
+  // what is normal for this particular horse, and where today sits against it
+  const baseline = animal && world.settings.baseline?.personalise !== false ? learnedBaseline(world, stall, animal, now) : null;
+  const deviation = baseline ? intakeDeviation(t, baseline, t.tempNow) : null;
+  const movement = baseline ? activityDeviation(stall, animal, baseline, now) : null;
+  return { stall, animal, today: t, past, behaviour, identity: id, events, baseline, deviation, movement };
 }
 
 /** Alerts raised by one stall, newest state first. */
 export function stallAlerts(world, st, now) {
-  const { stall, animal, today: t, behaviour, identity, events } = st;
+  const { stall, animal, today: t, behaviour, identity, events, baseline, deviation, movement } = st;
   if (!animal) return [];
   const s = world.settings;
   const key = dayKey(now);
@@ -51,9 +56,66 @@ export function stallAlerts(world, st, now) {
         actions: [{ id: "openStall", label: "Open stall" }, { id: "openCamera", label: "Watch camera" }],
       })
     );
+  } else if (deviation && !deviation.tooEarly && (deviation.low || deviation.high)) {
+    // The app has watched this horse long enough to know what it drinks, so it
+    // is judged against itself. A 55 L eventer dropping to 38 L is the alert
+    // here; a 22 L pony sitting at 22 L is not, and a yard-wide percentage
+    // would have got both of those the wrong way round.
+    const band = `${baseline.intake.lo}\u2013${baseline.intake.hi} L`;
+    if (deviation.low) {
+      const severe = deviation.verdict === "far below";
+      out.push(
+        mk({
+          ...base,
+          id: `intake:${stall.id}:${key}`,
+          severity: severe ? "critical" : "serious",
+          kind: "intake",
+          title: `${animal.name} is drinking below its own normal`,
+          detail:
+            `${t.intakeL} L so far, tracking about ${deviation.projected} L for the day. This horse normally drinks ` +
+            `${baseline.intake.median} L (usual range ${band}, learned over ${baseline.days} days)` +
+            `${deviation.adjusted ? `, and ${deviation.expected} L would be expected today for how warm the box is` : ""}. ` +
+            `That is ${Math.abs(deviation.z)} standard deviations below this horse — ${deviation.pct}% of what it should be drinking.`,
+          recommendation: severe
+            ? "Go and look at this horse. Check the drinker delivers, then take a temperature, gut sounds and droppings — a sharp drop against a horse's own baseline, rather than against a yard average, is the signal that usually comes before colic."
+            : "Check the drinker for airlocks and offer a fresh bucket at the next feed. This is a real change for this horse even though the litres look ordinary for the yard.",
+          actions: [{ id: "openAnimal", label: "Open profile" }, { id: "openCamera", label: "Watch camera" }],
+        })
+      );
+    } else {
+      out.push(
+        mk({
+          ...base,
+          id: `intakehigh:${stall.id}:${key}`,
+          severity: "warning",
+          kind: "intake",
+          title: `${animal.name} is drinking well above its own normal`,
+          detail:
+            `Tracking about ${deviation.projected} L against a learned normal of ${baseline.intake.median} L ` +
+            `(usual range ${band}). ${deviation.pct}% of this horse's usual intake.`,
+          recommendation:
+            "Worth noting rather than acting on if the box is warm or the horse has worked. A sustained rise with weight loss is worth a vet's opinion.",
+          actions: [{ id: "openAnimal", label: "Open profile" }],
+        })
+      );
+    }
+
+    if (t.hoursSinceDrink > s.noDrinkHours && behaviour?.state !== "turnout")
+      out.push(
+        mk({
+          ...base,
+          id: `dry:${stall.id}:${key}`,
+          severity: "serious",
+          kind: "intake",
+          title: `No drinking event for ${Math.floor(t.hoursSinceDrink)} h`,
+          detail: `${where} — last measured draw ${t.lastDrinkAt ? new Date(t.lastDrinkAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "not today"}.`,
+          recommendation: "Confirm the drinker is delivering, then watch for gut sounds and droppings. Persistent refusal to drink is an early colic sign.",
+          actions: [{ id: "openCamera", label: "Watch camera" }],
+        })
+      );
   } else {
-    // a percentage on its own fires on any quiet morning, so the shortfall has
-    // to be worth walking down the yard for as well
+    // no learned baseline yet (a new horse, or personalisation switched off),
+    // so fall back to the yard-wide goal
     const pct = t.pctOfGoal;
     const short = Math.round((t.expectedL - t.intakeL) * 10) / 10;
     if (pct < 50 && short >= 5)
@@ -183,6 +245,23 @@ export function stallAlerts(world, st, now) {
         actions: seen
           ? [{ id: "swapStalls", label: `Swap with ${seen.name}` }, { id: "openCamera", label: "Watch camera" }]
           : [{ id: "openCamera", label: "Watch camera" }],
+      })
+    );
+  }
+
+  // movement, like water, only means something against this horse's own normal
+  if (movement && !movement.tooEarly && movement.low && world.settings.camera.behaviour) {
+    out.push(
+      mk({
+        ...base,
+        id: `quiet:${stall.id}:${key}`,
+        severity: "warning",
+        kind: "camera",
+        title: `${animal.name} is moving less than usual`,
+        detail: `About ${movement.projected} active minutes projected for the day against a learned normal of ${movement.expected}. ${Math.abs(movement.z)} standard deviations below this horse.`,
+        recommendation:
+          "A horse that goes quiet is often sore before it is lame. Trot it up in hand, feel for heat and a digital pulse, and check it is eating as well as standing.",
+        actions: [{ id: "openCamera", label: "Watch camera" }, { id: "openAnimal", label: "Open profile" }],
       })
     );
   }
