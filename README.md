@@ -16,7 +16,10 @@ npm run build      # static build into dist/
 
 ## What it demonstrates
 
-**Dashboard** — the state of the yard in one screen. *Needs attention* is one card
+**Dashboard** — the state of the yard in one screen. Four tiles share one shape —
+a number, then the three facts behind it — so the row reads across instead of being
+decoded a tile at a time. Under them, *Needs attention* takes the left with the
+buildings beside it rather than below. *Needs attention* is one card
 per horse rather than one row per finding: the animal is the subject, with a still
 from its own camera, its welfare index, and every open finding on it underneath,
 each carrying its own criticality. Alongside it: the yard's welfare average, the
@@ -63,6 +66,23 @@ severity or source.
 and behaviour switches, the welfare index weighting, the passport database the yard
 searches, who gets told, and the demo controls (export the yard, add ten more barns
 of thirty boxes to see it at 300-stall scale, reset).
+
+## Drawing forty cameras without melting the laptop
+
+Every feed is a full canvas redraw, so a wall of them is real work. Three things
+keep it affordable, in order of how much they matter:
+
+1. **The box is drawn once.** The walls, floor, five hundred pieces of bedding and
+   the lamp are identical in every frame of every feed, so each lighting state is
+   rendered once into an offscreen canvas and blitted from then on. Only the horse,
+   the lens artefacts and the overlay are per-frame work. This alone took the camera
+   wall from roughly 47,000 canvas operations a second to 11,000.
+2. **A feed that is scrolled away stops drawing.** An `IntersectionObserver` per
+   canvas, so what is off-screen costs nothing — measured at zero.
+3. **A background tab stops drawing.** Nothing renders while the page is hidden.
+
+The four live feeds on the dashboard therefore cost about an eighth of what the
+camera wall already did before any of this, and nothing at all when scrolled past.
 
 ## Learning each horse
 

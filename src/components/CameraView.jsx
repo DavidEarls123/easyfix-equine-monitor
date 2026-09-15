@@ -91,6 +91,26 @@ const hash = (i) => {
 
 /* --------------------------------- scenery -------------------------------- */
 
+/**
+ * The box itself never changes — the walls, the floor, five hundred pieces of
+ * bedding and the lamp are the same in every frame of every feed. Drawing them
+ * per frame per tile was most of the cost of the camera wall, so each lighting
+ * state is rendered once into an offscreen canvas and blitted from then on.
+ * Only the horse, the lens artefacts and the overlay are per-frame work.
+ */
+const rooms = new Map();
+function roomFor(night) {
+  const key = night ? "night" : "day";
+  let cv = rooms.get(key);
+  if (cv) return cv;
+  cv = document.createElement("canvas");
+  cv.width = W;
+  cv.height = H;
+  drawRoom(cv.getContext("2d"), night ? NIGHT : DAY, night);
+  rooms.set(key, cv);
+  return cv;
+}
+
 function drawRoom(ctx, P, night) {
   // ceiling
   ctx.fillStyle = P.ceiling;
@@ -608,6 +628,13 @@ function drawLens(ctx, night, t) {
 
 /* -------------------------------- component ------------------------------- */
 
+/**
+ * Every feed is a full-scene canvas redraw, so a wall of them is real work. Two
+ * things keep that affordable, and both matter more than the frame rate does:
+ * a canvas that is scrolled out of view stops drawing, and so does every canvas
+ * on the page once the tab is in the background. A feed nobody is looking at
+ * costs nothing.
+ */
 export default function CameraView({ stall, animal, at, animate = true, fps = 12, overlay = true, height }) {
   const ref = useRef(null);
   const clock = useRef(0);
@@ -618,11 +645,26 @@ export default function CameraView({ stall, animal, at, animate = true, fps = 12
     const ctx = cv.getContext("2d");
     let raf = 0;
     let last = 0;
+    let onScreen = true;
+    let drawnOnce = false;
+
+    // stop drawing when scrolled away, and when the tab is not in front
+    const io =
+      animate && typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver((entries) => (onScreen = entries[0].isIntersecting), { rootMargin: "120px" })
+        : null;
+    io?.observe(cv);
+    const visible = () => typeof document === "undefined" || document.visibilityState === "visible";
+    const onVis = () => {};
+    document.addEventListener?.("visibilitychange", onVis);
 
     const frame = (ts) => {
       raf = requestAnimationFrame(frame);
+      // a still still needs its one frame; after that, idle feeds do nothing
+      if (drawnOnce && animate && (!onScreen || !visible())) return;
       if (ts - last < 1000 / fps) return;
       last = ts;
+      drawnOnce = true;
       clock.current += 1 / fps;
       const t = clock.current;
 
@@ -633,7 +675,7 @@ export default function CameraView({ stall, animal, at, animate = true, fps = 12
       const offline = stall.camera === false;
 
       ctx.clearRect(0, 0, W, H);
-      drawRoom(ctx, P, night);
+      ctx.drawImage(roomFor(night), 0, 0);
       const pose = poseFor(seg.state, t);
       if (!away && !offline) drawHorse(ctx, P, animal.colour, pose, night);
       drawLens(ctx, night, t);
@@ -675,14 +717,19 @@ export default function CameraView({ stall, animal, at, animate = true, fps = 12
     };
 
     raf = requestAnimationFrame(frame);
+    const stopAll = () => {
+      cancelAnimationFrame(raf);
+      io?.disconnect();
+      document.removeEventListener?.("visibilitychange", onVis);
+    };
     if (!animate) {
-      const stop = setTimeout(() => cancelAnimationFrame(raf), 120);
+      const stop = setTimeout(stopAll, 120);
       return () => {
         clearTimeout(stop);
-        cancelAnimationFrame(raf);
+        stopAll();
       };
     }
-    return () => cancelAnimationFrame(raf);
+    return stopAll;
   }, [stall, animal, at, animate, fps, overlay]);
 
   return <canvas ref={ref} width={W} height={H} style={height ? { height, width: "100%" } : undefined} />;

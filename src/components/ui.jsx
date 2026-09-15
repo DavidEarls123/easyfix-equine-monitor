@@ -31,11 +31,11 @@ export const SEVERITY = {
 
 /* -------------------------------- primitives ------------------------------- */
 
-export function Card({ title, sub, right, children, className = "", style, pad = true }) {
+export function Card({ title, sub, right, children, className = "", style, pad = true, big = false }) {
   return (
     <section className={`card ${pad ? "" : "pad0"} ${className}`} style={style}>
       {(title || right) && (
-        <header className="card-hd">
+        <header className={`card-hd ${big ? "big" : ""}`}>
           <div>
             {title && <h3>{title}</h3>}
             {sub && <div className="small mute" style={{ marginTop: 2 }}>{sub}</div>}

@@ -19,7 +19,7 @@ import { go } from "../lib/router";
 import { stallOfAnimal } from "../lib/world";
 import { RANK } from "../lib/insights";
 
-export default function AttentionList({ alerts, snap, now, limit = 4, empty = "Everything is inside its limits." }) {
+export default function AttentionList({ alerts, snap, now, limit = 4, live = false, empty = "Everything is inside its limits." }) {
   const { world, actions } = useWorld();
   const [openAll, setOpenAll] = useState({});
 
@@ -106,6 +106,7 @@ export default function AttentionList({ alerts, snap, now, limit = 4, empty = "E
           key={g.key}
           g={g}
           now={now}
+          live={live}
           onAction={act}
           onAck={(a) => actions.setAlertState(a.id, "ack")}
           expanded={!!openAll[g.key]}
@@ -118,7 +119,7 @@ export default function AttentionList({ alerts, snap, now, limit = 4, empty = "E
 
 const SHOWN = 3; // issues visible before the card folds the rest away
 
-function Group({ g, now, onAction, onAck, expanded, onExpand }) {
+function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
   const worst = g.issues[0].severity;
   const tone = worst === "info" ? "good" : worst;
   const visible = expanded ? g.issues : g.issues.slice(0, SHOWN);
@@ -130,7 +131,10 @@ function Group({ g, now, onAction, onAck, expanded, onExpand }) {
         <button className="attn-hd" onClick={() => go(`animal/${g.animal.id}`)}>
           {g.stall ? (
             <span className="attn-still">
-              <CameraView stall={g.stall} animal={g.animal} at={now} animate={false} overlay={false} height={78} />
+              {/* live, but at a low frame rate — and the canvas stops entirely
+                  when it scrolls away or the tab goes to the background */}
+              <CameraView stall={g.stall} animal={g.animal} at={now} animate={live} fps={5} overlay={false} height={84} />
+              {live && <span className="attn-live">LIVE</span>}
             </span>
           ) : (
             <Coat animal={g.animal} size={52} />
@@ -193,10 +197,15 @@ function Group({ g, now, onAction, onAck, expanded, onExpand }) {
                   <Pill tone={t}>{meta.label}</Pill>
                   <span className="when">{ago(a.at || a.ts, now)}</span>
                 </div>
-                <div className="why">{a.detail}</div>
+                <ul className="facts">
+                  {factsOf(a).map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
                 {a.recommendation && (
                   <div className="rec">
-                    <b>Do this:</b> {a.recommendation}
+                    <div className="rec-hd">Do this</div>
+                    <p>{a.recommendation}</p>
                   </div>
                 )}
                 <div className="acts">
@@ -224,4 +233,19 @@ function Group({ g, now, onAction, onAck, expanded, onExpand }) {
       )}
     </article>
   );
+}
+
+/**
+ * The facts behind a finding, as separate points.
+ *
+ * Alerts carry a `facts` array where the engine has one; everything else is a
+ * written sentence, so it is split on the separators those sentences already
+ * use rather than being left as a wall of text.
+ */
+function factsOf(a) {
+  if (Array.isArray(a.facts) && a.facts.length) return a.facts;
+  return String(a.detail || "")
+    .split(/(?:\s+—\s+|\s+·\s+|(?<=[a-z0-9)%])\.\s+(?=[A-Z]))/)
+    .map((x) => x.trim().replace(/\.$/, ""))
+    .filter(Boolean);
 }
