@@ -372,7 +372,7 @@ function Single({ stall }) {
             )}
           </Card>
 
-          <Card title="Clips flagged today" sub="Click to jump the playback there">
+          <Card title="Clips flagged today" sub="Click one and it plays from a minute before">
             {events.length === 0 && <div className="small mute">Nothing flagged today.</div>}
             {events
               .slice()
@@ -383,9 +383,12 @@ function Single({ stall }) {
                   className="alert-row"
                   style={{ width: "100%", textAlign: "left", cursor: "pointer", background: "#fff" }}
                   onClick={() => {
+                    // picking a clip is asking to watch it, so it runs — a minute
+                    // before the event, at normal speed, without a second press
                     setMode("playback");
-                    setPlaying(false);
                     setMins(Math.max(0, (e.at - dayStart) / 60000 - 1));
+                    setSpeed(1);
+                    setPlaying(true);
                   }}
                 >
                   <span className={`ico ${e.severity === "info" ? "good" : e.severity}`}>

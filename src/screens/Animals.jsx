@@ -11,8 +11,8 @@ import { ageOf } from "../lib/registry";
 
 const TABS = [
   { id: "occupied", label: "Occupied", icon: "barn" },
-  { id: "all", label: "All profiles", icon: "horse" },
-  { id: "free", label: "Unassigned", icon: "note" },
+  { id: "all", label: "All profiles", icon: "head" },
+  { id: "free", label: "Without a box", icon: "barn" },
 ];
 
 export default function Animals({ snap }) {
@@ -72,7 +72,7 @@ export default function Animals({ snap }) {
 
       <Card pad={false} style={{ padding: "6px 14px 14px" }}>
         {rows.length === 0 ? (
-          <Empty icon="horse">No horses here yet.</Empty>
+          <Empty icon="head">No horses here yet.</Empty>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">

@@ -186,6 +186,16 @@ export function WorldProvider({ children }) {
           return w;
         });
       },
+      /** The manager's marker that this morning is settled. */
+      markPlanSaved(when) {
+        const key = dayKey(when);
+        edit((w) => {
+          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, savedAt: Date.now() } };
+          return w;
+        });
+        say("Morning saved");
+      },
       clearPlan(when) {
         const key = dayKey(when);
         edit((w) => {

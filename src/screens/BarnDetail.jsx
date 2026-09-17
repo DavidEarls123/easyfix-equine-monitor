@@ -6,7 +6,7 @@
 import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import { Card, Coat, Empty, Field, Modal, Pill, Tabs, Tile } from "../components/ui";
-import AlertList from "../components/AlertList";
+import AttentionList from "../components/AttentionList";
 import LayoutEditor from "../components/LayoutEditor";
 import { C, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
@@ -31,6 +31,7 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
   const [assigning, setAssigning] = useState(null);
   const [editing, setEditing] = useState(false);
   const [renaming, setRenaming] = useState(null); // a barn or a stall being renamed
+  const [settings, setSettings] = useState(false);
 
   if (!roll) return <Empty icon="barn">No barns yet. Add one from the yard screen.</Empty>;
   const barn = roll.barn;
@@ -45,13 +46,6 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
       <div className="page-hd">
         <div className="row" style={{ gap: 10 }}>
           <h1>{barn.name}</h1>
-          <button
-            className="icon-btn"
-            title="Rename this barn"
-            onClick={() => setRenaming({ kind: "barn", id: barn.id, name: barn.name })}
-          >
-            <Icon name="edit" size={15} />
-          </button>
           <select
             className="sel"
             style={{ width: "auto" }}
@@ -67,6 +61,9 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
           </select>
         </div>
         <div className="hd-actions">
+          <button className="btn" onClick={() => setSettings(true)}>
+            <Icon name="settings" size={15} /> Barn settings
+          </button>
           <button className="btn" onClick={() => go(`video?barn=${barn.id}`)}>
             <Icon name="video" size={15} /> Cameras
           </button>
@@ -92,7 +89,7 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
           </Empty>
         </Card>
       ) : at === "overview" ? (
-        <Overview roll={roll} alerts={alerts} now={now} onAssign={setAssigning} onRename={setRenaming} />
+        <Overview roll={roll} alerts={alerts} now={now} snap={snap} onAssign={setAssigning} onRename={setRenaming} />
       ) : at === "door" ? (
         <Card
           title={`${barn.name} — screen on the barn door`}
@@ -101,9 +98,21 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
           <FrontOfBarn roll={roll} now={now} />
         </Card>
       ) : at === "stock" ? (
-        <Stock roll={roll} alerts={alerts.filter((a) => a.kind === "stock")} now={now} onSet={(p) => actions.setStock(barn.id, p)} />
+        <Stock roll={roll} alerts={alerts.filter((a) => a.kind === "stock")} now={now} snap={snap} onSet={(p) => actions.setStock(barn.id, p)} />
       ) : (
         <Layout roll={roll} editing={editing} setEditing={setEditing} onAssign={setAssigning} />
+      )}
+
+      {settings && (
+        <BarnSettings
+          barn={barn}
+          onClose={() => setSettings(false)}
+          onEditLayout={() => {
+            setSettings(false);
+            go(`barn/${barn.id}?t=layout`);
+            setEditing(true);
+          }}
+        />
       )}
 
       {renaming && (
@@ -125,7 +134,7 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
 
 /* -------------------------------- overview -------------------------------- */
 
-function Overview({ roll, alerts, now, onAssign, onRename }) {
+function Overview({ roll, alerts, now, snap, onAssign, onRename }) {
   const { world } = useWorld();
   const s = world.settings;
   const [page, setPage] = useState(0);
@@ -177,7 +186,7 @@ function Overview({ roll, alerts, now, onAssign, onRename }) {
         </Card>
 
         <Card title="Warnings" sub={`${alerts.length} open in ${roll.barn.name}`}>
-          <AlertList alerts={alerts} now={now} limit={6} empty="No active warnings." />
+          <AttentionList alerts={alerts} snap={snap} now={now} limit={6} empty="No active warnings." />
         </Card>
       </div>
 
@@ -304,7 +313,7 @@ const SWATCH = { stall: "#dbecff", aisle: "#e6ecf3", door: "#dde4ec", tack: "#ec
 
 /* ---------------------------------- stock --------------------------------- */
 
-function Stock({ roll, alerts, now, onSet }) {
+function Stock({ roll, alerts, now, snap, onSet }) {
   const { say } = useWorld();
   const b = roll.barn;
   const dailyWater = Math.round(roll.occupied * (roll.intakeL || 30));
@@ -342,7 +351,7 @@ function Stock({ roll, alerts, now, onSet }) {
         </Card>
 
         <Card title="Stock warnings">
-          <AlertList alerts={alerts} now={now} empty="Stock levels are fine." />
+          <AttentionList alerts={alerts} snap={snap} now={now} limit={20} empty="Stock levels are fine." />
         </Card>
       </div>
 
@@ -393,7 +402,7 @@ function Layout({ roll, editing, setEditing, onAssign }) {
       sub={`${stalls.length} boxes · ${roll.occupied} occupied · click a box to assign a horse`}
       right={
         <button className="btn" onClick={() => setEditing(true)}>
-          <Icon name="edit" size={15} /> Edit layout
+          <Icon name="edit" size={15} /> Edit the grid
         </button>
       }
     >
@@ -553,6 +562,77 @@ function RenameModal({ target, onClose, onSave }) {
           onKeyDown={(e) => e.key === "Enter" && save()}
         />
       </Field>
+    </Modal>
+  );
+}
+
+/* ------------------------------ barn settings ------------------------------ */
+
+/** Everything about the building in one place, rather than a pencil here and a
+    button on another tab. */
+function BarnSettings({ barn, onClose, onEditLayout }) {
+  const { actions } = useWorld();
+  const [name, setName] = useState(barn.name);
+  const [confirm, setConfirm] = useState(false);
+
+  const save = () => {
+    if (name.trim() && name.trim() !== barn.name) actions.renameBarn(barn.id, name.trim());
+    onClose();
+  };
+
+  return (
+    <Modal
+      title={`${barn.name} settings`}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn danger" style={{ marginRight: "auto" }} onClick={() => setConfirm(true)}>
+            <Icon name="trash" size={14} /> Delete barn
+          </button>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn pri" onClick={save}>
+            <Icon name="check" size={15} /> Save
+          </button>
+        </>
+      }
+    >
+      <div className="grid" style={{ gap: 14 }}>
+        <Field label="Barn name" hint="Use the name on the building rather than a number.">
+          <input className="inp" autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+
+        <Field label="Layout" hint={barn.configured ? `${barn.cols}×${barn.rows} grid` : "Not laid out yet"}>
+          <button className="btn" onClick={onEditLayout}>
+            <Icon name="grid" size={15} /> {barn.configured ? "Edit the barn layout" : "Set up the layout"}
+          </button>
+        </Field>
+
+        {confirm && (
+          <div className="rec" style={{ background: "#fef4f4", borderColor: "#f2cccc" }}>
+            <div className="rec-hd" style={{ color: "#a92c2c" }}>Delete this barn</div>
+            <p>
+              Every box in {barn.name} stops being monitored and its horses lose their box. This cannot be undone.
+            </p>
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <button className="btn sm" onClick={() => setConfirm(false)}>
+                Keep it
+              </button>
+              <button
+                className="btn sm danger"
+                onClick={() => {
+                  actions.removeBarn(barn.id);
+                  onClose();
+                  go("barns");
+                }}
+              >
+                Delete {barn.name}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </Modal>
   );
 }

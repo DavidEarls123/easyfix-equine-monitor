@@ -32,7 +32,7 @@ export default function AnimalProfile({ id }) {
 
   const animal = world.animals.find((a) => a.id === id);
   const stall = world.stalls.find((s) => s.animalId === id) || null;
-  if (!animal) return <Empty icon="horse">That profile no longer exists.</Empty>;
+  if (!animal) return <Empty icon="head">That profile no longer exists.</Empty>;
 
   const barn = stall ? world.barns.find((b) => b.id === stall.barnId) : null;
   const st = stall ? stallState(world, stall, now) : null;

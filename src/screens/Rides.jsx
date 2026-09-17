@@ -32,6 +32,14 @@ export default function Rides() {
   const [q, setQ] = useState("");
   const [showRiders, setShowRiders] = useState(false);
   const [sending, setSending] = useState(false);
+  const [preview, setPreview] = useState(null); // whose message the manager is reading
+
+  // the plan is already stored on every change; Save is the manager's marker
+  // that they are happy with it, and is what Publish checks against
+  const saveDraft = () => {
+    actions.markPlanSaved(now);
+  };
+  const plannedAt = world.ridePlan?.[new Date(now).toISOString().slice(0, 10)]?.savedAt;
 
   const lot = plan.lots.find((l) => l.id === lotId) || plan.lots[0];
   const riders = availableRiders(world.staff);
@@ -74,8 +82,11 @@ export default function Rides() {
           <button className="btn" onClick={() => go("board")}>
             <Icon name="screen" size={15} /> Yard board
           </button>
+          <button className="btn" disabled={!summary.rides} onClick={saveDraft}>
+            <Icon name="check" size={15} /> Save
+          </button>
           <button className="btn pri" disabled={!summary.rides} onClick={() => setSending(true)}>
-            <Icon name="bell" size={15} /> Send the morning list
+            <Icon name="bell" size={15} /> Publish
           </button>
         </div>
       </div>
@@ -98,18 +109,27 @@ export default function Rides() {
         </button>
       </div>
 
-      {held && (
-        <div className="held-bar">
-          <Coat animal={held} size={26} />
-          <b>{held.name}</b>
-          <span>picked up — now tap the rider who is on it</span>
-          <button className="btn sm ghost" onClick={() => setHeld(null)}>
-            Put back
-          </button>
-        </div>
-      )}
+      {/* this row is always here, filled or not, so picking a horse up never
+          shifts the lot underneath the manager's cursor */}
+      <div className={`held-bar ${held ? "on" : ""}`}>
+        {held ? (
+          <>
+            <Coat animal={held} size={26} />
+            <b>{held.name}</b>
+            <span>picked up — now tap the rider who is on it</span>
+            <button className="btn sm ghost" onClick={() => setHeld(null)}>
+              Put back
+            </button>
+          </>
+        ) : (
+          <>
+            <Icon name="head" size={18} />
+            <span>Tap a horse to pick it up, or drag it straight onto a rider.</span>
+          </>
+        )}
+      </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(280px,0.5fr)", alignItems: "start" }}>
+      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(300px,0.52fr)", alignItems: "start" }}>
         {/* riders for the chosen lot */}
         <Card
           title={`${lot?.label} — ${lot?.time}`}
@@ -184,7 +204,8 @@ export default function Rides() {
           )}
         </Card>
 
-        {/* the horses still to be found a rider */}
+        {/* the horses still to be found a rider, and what the plan will say */}
+        <div className="grid">
         <Card
           title="Horses not down yet"
           sub={`${pool.length} of ${world.animals.length} unassigned this morning`}
@@ -222,6 +243,29 @@ export default function Rides() {
             ))}
           </div>
         </Card>
+
+        <Card
+          title="What a rider gets"
+          sub="The exact message that goes out when this is published"
+          right={
+            <select
+              className="sel"
+              style={{ width: "auto", maxWidth: 170 }}
+              value={preview || ""}
+              onChange={(e) => setPreview(e.target.value || null)}
+            >
+              <option value="">First rider with a ride</option>
+              {riders.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          }
+        >
+          <RideTextPreview plan={plan} riderId={preview} />
+        </Card>
+        </div>
       </div>
 
       {showRiders && <RiderPicker onClose={() => setShowRiders(false)} />}
@@ -346,5 +390,47 @@ function SendList({ plan, onClose }) {
         ))}
       </div>
     </Modal>
+  );
+}
+
+/* ---------------------------- the message preview -------------------------- */
+
+/** The message itself, on a phone, so a manager can see what they are sending. */
+function RideTextPreview({ plan, riderId }) {
+  const { world, now } = useWorld();
+  const yardName = world.yards[0]?.name || "Yard";
+  const riders = availableRiders(world.staff);
+  const chosen =
+    (riderId && riders.find((p) => p.id === riderId)) ||
+    riders.find((p) => ridesOf(plan, p.id).length) ||
+    riders[0];
+  const msg = chosen ? morningMessage(plan, chosen, world.animals, yardName) : null;
+
+  if (!chosen) return <div className="small mute">Nobody is marked as riding today.</div>;
+
+  return (
+    <div className="sms">
+      <div className="sms-hd">
+        <Icon name="bell" size={13} />
+        <b>{chosen.name}</b>
+        <span className="tiny mute" style={{ marginLeft: "auto" }}>{chosen.phone}</span>
+      </div>
+      <div className="sms-body">
+        {msg ? (
+          <div className="sms-bubble">
+            <div className="sms-subject">{msg.subject}</div>
+            {msg.body.split("\n").map((line, i) => (
+              <div key={i} className={line.trim() ? "" : "sms-gap"}>
+                {line}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="sms-bubble empty">
+            {chosen.name.split(" ")[0]} has no rides in this plan, so nothing would be sent to them.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

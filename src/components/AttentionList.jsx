@@ -140,16 +140,16 @@ function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
             <Coat animal={g.animal} size={52} />
           )}
           <span className="attn-who">
-            <span className="row" style={{ gap: 8 }}>
+            <span className="row" style={{ gap: 9 }}>
               <span className="nm">{g.animal.name}</span>
               <Pill tone={tone}>
                 {g.issues.length} {g.issues.length === 1 ? "issue" : "issues"}
               </Pill>
             </span>
-            <span className="sub">
+            <span className="attn-where">
+              <Icon name="barn" size={13} />
               {g.barn?.name}
-              {g.stall ? ` · ${g.stall.name}` : ""} · {g.animal.colour} {g.animal.sex?.toLowerCase()}
-              {g.animal.age != null ? `, ${g.animal.age}` : ""}
+              {g.stall ? ` · ${g.stall.name}` : ""}
             </span>
           </span>
           {g.welfare && (
@@ -198,7 +198,7 @@ function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
                   <span className="when">{ago(a.at || a.ts, now)}</span>
                 </div>
                 <ul className="facts">
-                  {factsOf(a).map((f, i) => (
+                  {factsOf(a, g).map((f, i) => (
                     <li key={i}>{f}</li>
                   ))}
                 </ul>
@@ -210,11 +210,11 @@ function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
                 )}
                 <div className="acts">
                   {(a.actions || []).map((x) => (
-                    <button key={x.id} className="btn sm" onClick={() => onAction(x.id, a)}>
+                    <button key={x.id} className="btn sm act" onClick={() => onAction(x.id, a)}>
                       {x.label}
                     </button>
                   ))}
-                  <button className="btn sm ghost" onClick={() => onAck(a)}>
+                  <button className="btn sm ack" onClick={() => onAck(a)}>
                     <Icon name="check" size={13} /> Acknowledge
                   </button>
                 </div>
@@ -242,10 +242,18 @@ function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
  * written sentence, so it is split on the separators those sentences already
  * use rather than being left as a wall of text.
  */
-function factsOf(a) {
-  if (Array.isArray(a.facts) && a.facts.length) return a.facts;
-  return String(a.detail || "")
-    .split(/(?:\s+—\s+|\s+·\s+|(?<=[a-z0-9)%])\.\s+(?=[A-Z]))/)
-    .map((x) => x.trim().replace(/\.$/, ""))
-    .filter(Boolean);
+function factsOf(a, g) {
+  const raw = Array.isArray(a.facts) && a.facts.length
+    ? a.facts
+    : String(a.detail || "")
+        .split(/(?:\s+—\s+|\s+·\s+|(?<=[a-z0-9)%])\.\s+(?=[A-Z]))/)
+        .map((x) => x.trim().replace(/\.$/, ""))
+        .filter(Boolean);
+
+  // the card already says which horse and which box; a bullet repeating either
+  // is a line the reader has to skip past to reach the finding
+  const noise = new Set(
+    [g?.animal?.name, g?.stall?.name, g?.barn?.name].filter(Boolean).map((x) => x.toLowerCase())
+  );
+  return raw.filter((f) => !noise.has(f.trim().toLowerCase().replace(/\.$/, "")));
 }

@@ -84,7 +84,7 @@ export default function Board() {
 
         {!lot ? (
           <div className="bd-empty">
-            <Icon name="horse" size={50} />
+            <Icon name="head" size={50} />
             <h2>No lots planned</h2>
             <p>Assign horses on the planning screen and they appear here.</p>
           </div>

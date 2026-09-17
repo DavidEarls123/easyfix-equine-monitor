@@ -51,7 +51,7 @@ export default function Staff() {
         </div>
         <div className="hd-actions">
           <button className="btn" onClick={() => go("rides")}>
-            <Icon name="horse" size={15} /> Ride planning
+            <Icon name="helmet" size={15} /> Ride planning
           </button>
           <button className="btn" onClick={() => setComposing(true)}>
             <Icon name="bell" size={15} /> Send a message

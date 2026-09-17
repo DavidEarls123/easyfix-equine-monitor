@@ -4,7 +4,7 @@
 import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import { Card, Empty, Pill, Tabs, ago, dmy } from "../components/ui";
-import AlertList from "../components/AlertList";
+import AttentionList from "../components/AttentionList";
 import { useWorld } from "../lib/store";
 import { notificationFeed } from "../lib/insights";
 
@@ -64,8 +64,8 @@ export default function Notifications({ snap }) {
         <Tabs items={FILTERS} value={tab} onChange={setTab} />
       </div>
 
-      <Card title="Today" sub={`${today.length} alerts`}>
-        <AlertList alerts={today} now={now} empty="Nothing raised today." />
+      <Card title="Today" sub={`${today.length} alerts, grouped by horse — every finding on that animal in one card`}>
+        <AttentionList alerts={today} snap={snap} now={now} limit={200} empty="Nothing raised today." />
       </Card>
 
       {earlier.length > 0 && (

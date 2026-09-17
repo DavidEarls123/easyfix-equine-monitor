@@ -43,8 +43,8 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
   return (
     <div className="fos" role="group" aria-label={`Stall screen for ${stall.name}`}>
       <div className="fos-screen">
-        {/* left rail: the brand, then the three readings the box is measured on */}
-        <div className="fos-rail">
+        {/* top strip: the brand, the three readings, who owns it, the time */}
+        <header className="fos-top">
           <img
             className="fos-logo"
             src={`${import.meta.env.BASE_URL}brand/easyfix-logo.svg`}
@@ -55,26 +55,28 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
             <Metric icon="temp" label="TEMP" value={t?.tempNow != null ? `${t.tempNow}°` : "—"} st={temp} />
             <Metric icon="water" label="WATER" value={t ? `${t.intakeL}L` : "—"} st={water} />
           </div>
-        </div>
-
-        {/* centre: who is in this box */}
-        <div className="fos-body">
-          <div className="fos-id">
-            <h2>{animal ? animal.name : "Empty box"}</h2>
-            {animal && (
-              <div className="fos-sub">
-                <span>
-                  <b>Age:</b> {ageOf(animal.foaled, now) ?? "—"}
-                </span>
-                <span>
-                  <b>Sex:</b> {animal.sex}
-                </span>
-                <span>
-                  <b>Type:</b> {animal.colour}
-                </span>
-              </div>
-            )}
+          <div className="fos-owner">
+            {animal && <Silks owner={animal.owner} size={54} />}
+            <span className="fos-clock nums">{new Date(now).toLocaleTimeString([], { hour12: false })}</span>
           </div>
+        </header>
+
+        {/* the horse */}
+        <div className="fos-body">
+          <h2>{animal ? animal.name : "Empty box"}</h2>
+          {animal && (
+            <div className="fos-sub">
+              <span>
+                <b>Age:</b>{ageOf(animal.foaled, now) ?? "—"}
+              </span>
+              <span>
+                <b>Sex:</b>{animal.sex}
+              </span>
+              <span>
+                <b>Type:</b>{animal.colour}
+              </span>
+            </div>
+          )}
 
           {animal && (
             <dl className="fos-facts">
@@ -91,33 +93,26 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
               ))}
             </dl>
           )}
-
-          <div className="fos-note">
-            <Icon name="note" size={18} />
-            <p>{animal?.stallNote || "No notes for this box today."}</p>
-          </div>
         </div>
 
-        {/* right: identity at a glance, the clock, and the two things to press */}
-        <div className="fos-side">
-          <div className="fos-top">
-            {animal && <Silks owner={animal.owner} size={60} />}
-            <span className="fos-clock nums">{new Date(now).toLocaleTimeString([], { hour12: false })}</span>
+        {/* the strip along the bottom: notes, the two targets, the menu */}
+        <footer className="fos-foot">
+          <div className="fos-note">
+            <Icon name="note" size={22} />
+            <p>{animal?.stallNote || "No notes for this box today."}</p>
           </div>
-
           {animal && care && (
             <div className="fos-tasks">
               <Task kind="clean" c={care.clean} onPress={press} />
               <Task kind="feed" c={care.feed} onPress={press} />
             </div>
           )}
-
           <button className="fos-menu" onClick={onClose} aria-label="Close">
             <span />
             <span />
             <span />
           </button>
-        </div>
+        </footer>
       </div>
 
       {confirm && (
@@ -184,9 +179,14 @@ function Task({ kind, c, onPress }) {
       <span className="fos-task-ico">
         <Icon name={meta.icon} size={30} />
       </span>
-      <span className="fos-task-count nums">
-        {c.done}
-        <i>/{c.target}</i>
+      <span className="fos-task-meta">
+        <span className="fos-task-count nums">
+          {c.done}
+          <i>/{c.target}</i>
+        </span>
+        <span className="fos-task-note">
+          {c.complete ? meta.done : c.behind ? `${c.behind} behind` : meta.label}
+        </span>
       </span>
       <span className="fos-task-label">
         {c.complete

@@ -151,8 +151,8 @@ export default function Dashboard({ snap }) {
           big
           sub="One card per horse — every finding on that animal, worst first"
           right={
-            <button className="btn sm" onClick={() => go("alerts")}>
-              Show all ({snap.alerts.length})
+            <button className="btn sm act" onClick={() => go("alerts")}>
+              Show all {snap.alerts.length} findings
             </button>
           }
         >
@@ -167,6 +167,30 @@ export default function Dashboard({ snap }) {
         </Card>
 
         <div className="grid">
+          <Card title="Lowest welfare index" sub="Whether or not they have tripped a threshold">
+            {snap.welfare.lowest.length === 0 && <div className="small mute">No monitored horses yet.</div>}
+            {snap.welfare.lowest.slice(0, 5).map((x) => (
+              <button
+                key={x.stall.id}
+                className="alert-row"
+                style={{ width: "100%", textAlign: "left", cursor: "pointer", background: "#fff" }}
+                onClick={() => go(`animal/${x.animal.id}`)}
+              >
+                <Coat animal={x.animal} size={28} />
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="row" style={{ gap: 8 }}>
+                    <b>{x.animal.name}</b>
+                    <span className="tiny mute">{x.stall.name}</span>
+                  </div>
+                  <div className="why">
+                    {x.welfare.weakest ? `${x.welfare.weakest.label.toLowerCase()} — ${x.welfare.weakest.why}` : ""}
+                  </div>
+                </div>
+                <WelfareBar welfare={x.welfare} width={44} />
+              </button>
+            ))}
+          </Card>
+
           <Card title="Barn health" sub="Same read as the barns screen, in short">
             <div className="barn-mini-list">
               {snap.rolls
@@ -224,30 +248,6 @@ export default function Dashboard({ snap }) {
                 </button>
               )}
             </div>
-          </Card>
-
-          <Card title="Lowest welfare index" sub="Whether or not they have tripped a threshold">
-            {snap.welfare.lowest.length === 0 && <div className="small mute">No monitored horses yet.</div>}
-            {snap.welfare.lowest.slice(0, 5).map((x) => (
-              <button
-                key={x.stall.id}
-                className="alert-row"
-                style={{ width: "100%", textAlign: "left", cursor: "pointer", background: "#fff" }}
-                onClick={() => go(`animal/${x.animal.id}`)}
-              >
-                <Coat animal={x.animal} size={28} />
-                <div className="grow" style={{ minWidth: 0 }}>
-                  <div className="row" style={{ gap: 8 }}>
-                    <b>{x.animal.name}</b>
-                    <span className="tiny mute">{x.stall.name}</span>
-                  </div>
-                  <div className="why">
-                    {x.welfare.weakest ? `${x.welfare.weakest.label.toLowerCase()} — ${x.welfare.weakest.why}` : ""}
-                  </div>
-                </div>
-                <WelfareBar welfare={x.welfare} width={44} />
-              </button>
-            ))}
           </Card>
         </div>
       </div>

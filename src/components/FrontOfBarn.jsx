@@ -61,10 +61,11 @@ export default function FrontOfBarn({ roll, now }) {
         <span className="fob-clock nums">{new Date(now).toLocaleTimeString([], { hour12: false })}</span>
       </header>
 
-      <div
-        className="fob-plan"
-        style={{ gridTemplateColumns: `repeat(${barn.cols}, minmax(0, 1fr))` }}
-      >
+      <div className="fob-plan-wrap">
+        <div
+          className="fob-plan"
+          style={{ gridTemplateColumns: `repeat(${barn.cols}, minmax(0, 1fr))` }}
+        >
         {grid.map((cell) => {
           if (cell.kind !== "stall")
             return (
@@ -108,11 +109,25 @@ export default function FrontOfBarn({ roll, now }) {
                 <i>{Math.round(t.airNow)}%</i>
               </span>
               <span className="fob-box-rounds">
-                <span className={care.clean.complete ? "ok" : care.clean.behind ? "late" : ""}>
-                  <Icon name="clean" size={11} /> {care.clean.done}/{care.clean.target}
+                <span
+                  className={care.feed.complete ? "ok" : care.feed.behind ? "late" : ""}
+                  title={`Feeds: ${care.feed.done} of ${care.feed.target} today`}
+                >
+                  <Icon name="feed" size={12} />
+                  <i className="nums">
+                    {care.feed.done}/{care.feed.target}
+                  </i>
+                  <em>fed</em>
                 </span>
-                <span className={care.feed.complete ? "ok" : care.feed.behind ? "late" : ""}>
-                  <Icon name="feed" size={11} /> {care.feed.done}/{care.feed.target}
+                <span
+                  className={care.clean.complete ? "ok" : care.clean.behind ? "late" : ""}
+                  title={`Muck outs: ${care.clean.done} of ${care.clean.target} today`}
+                >
+                  <Icon name="clean" size={12} />
+                  <i className="nums">
+                    {care.clean.done}/{care.clean.target}
+                  </i>
+                  <em>mucked</em>
                 </span>
               </span>
               {st.events?.some((e) => e.severity === "critical" || e.severity === "serious") && (
@@ -121,8 +136,9 @@ export default function FrontOfBarn({ roll, now }) {
                 </span>
               )}
             </button>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <footer className="fob-key">

@@ -19,9 +19,9 @@ import Board from "./screens/Board";
 const NAV = [
   { at: "dashboard", label: "Dashboard", icon: "dashboard" },
   { at: "barns", label: "Barns", icon: "barn", sub: true, parent: "yard" },
-  { at: "animals", label: "Animals", icon: "horse", sub: true, parent: "yard" },
+  { at: "animals", label: "Animals", icon: "head", sub: true, parent: "yard" },
   { at: "staff", label: "Staff", icon: "id", sub: true, parent: "people" },
-  { at: "rides", label: "Ride planning", icon: "horse", sub: true, parent: "people" },
+  { at: "rides", label: "Ride planning", icon: "helmet", sub: true, parent: "people" },
   { at: "video", label: "Video", icon: "video" },
   { at: "alerts", label: "Notifications", icon: "bell" },
   { at: "settings", label: "Settings", icon: "settings" },
