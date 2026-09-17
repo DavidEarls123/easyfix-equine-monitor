@@ -104,7 +104,7 @@ export default function Board() {
             <div className="bd-rows" style={{ "--cols": rows.length > 14 ? 3 : rows.length > 6 ? 2 : 1 }}>
               {rows.map(({ ride, rider, animal }) => (
                 <div className="bd-row" key={ride.id}>
-                  <Silks owner={animal?.owner} size={40} showCap={false} />
+                  <Silks animal={animal} size={40} />
                   <div className="bd-pair">
                     <span className="bd-rider">{rider?.name || "Unmanned"}</span>
                     <span className="bd-horse">{animal?.name || "TBC"}</span>

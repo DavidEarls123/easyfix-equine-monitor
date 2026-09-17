@@ -22,6 +22,7 @@ import { useWorld } from "../lib/store";
 import { CARE, careToday, dueTimes } from "../lib/care";
 import { ageOf } from "../lib/registry";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
+import { colourOf } from "../lib/colours";
 
 export default function FrontOfStall({ stall, animal, state, now, onClose }) {
   const { world, actions } = useWorld();
@@ -43,8 +44,8 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
   return (
     <div className="fos" role="group" aria-label={`Stall screen for ${stall.name}`}>
       <div className="fos-screen">
-        {/* top strip: the brand, the three readings, who owns it, the time */}
-        <header className="fos-top">
+        {/* the left rail carries the brand and the three readings, as on the box */}
+        <aside className="fos-rail">
           <img
             className="fos-logo"
             src={`${import.meta.env.BASE_URL}brand/easyfix-logo.svg`}
@@ -55,28 +56,35 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
             <Metric icon="temp" label="TEMP" value={t?.tempNow != null ? `${t.tempNow}°` : "—"} st={temp} />
             <Metric icon="water" label="WATER" value={t ? `${t.intakeL}L` : "—"} st={water} />
           </div>
-          <div className="fos-owner">
-            {animal && <Silks owner={animal.owner} size={54} />}
-            <span className="fos-clock nums">{new Date(now).toLocaleTimeString([], { hour12: false })}</span>
-          </div>
-        </header>
+        </aside>
 
-        {/* the horse */}
-        <div className="fos-body">
-          <h2>{animal ? animal.name : "Empty box"}</h2>
-          {animal && (
-            <div className="fos-sub">
-              <span>
-                <b>Age:</b>{ageOf(animal.foaled, now) ?? "—"}
-              </span>
-              <span>
-                <b>Sex:</b>{animal.sex}
-              </span>
-              <span>
-                <b>Type:</b>{animal.colour}
-              </span>
+        <div className="fos-main">
+          {/* the horse, with the owner's colours and the clock opposite */}
+          <div className="fos-head">
+            <div className="fos-id">
+              <h2>{animal ? animal.name : "Empty box"}</h2>
+              {animal && (
+                <div className="fos-sub">
+                  <span>
+                    <b>Age:</b>
+                    {ageOf(animal.foaled, now) ?? "—"}
+                  </span>
+                  <span>
+                    <b>Sex:</b>
+                    {animal.sex}
+                  </span>
+                  <span>
+                    <b>Type:</b>
+                    {colourOf(animal.colour).label}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
+            <div className="fos-owner">
+              {animal && <Silks animal={animal} size={62} />}
+              <span className="fos-clock nums">{new Date(now).toLocaleTimeString([], { hour12: false })}</span>
+            </div>
+          </div>
 
           {animal && (
             <dl className="fos-facts">
@@ -93,26 +101,26 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
               ))}
             </dl>
           )}
-        </div>
 
-        {/* the strip along the bottom: notes, the two targets, the menu */}
-        <footer className="fos-foot">
-          <div className="fos-note">
-            <Icon name="note" size={22} />
-            <p>{animal?.stallNote || "No notes for this box today."}</p>
-          </div>
-          {animal && care && (
-            <div className="fos-tasks">
-              <Task kind="clean" c={care.clean} onPress={press} />
-              <Task kind="feed" c={care.feed} onPress={press} />
+          {/* notes on the left of the foot, the two targets and the menu on the right */}
+          <footer className="fos-foot">
+            <div className="fos-note">
+              <Icon name="note" size={21} />
+              <p>{animal?.stallNote || "No notes for this box today."}</p>
             </div>
-          )}
-          <button className="fos-menu" onClick={onClose} aria-label="Close">
-            <span />
-            <span />
-            <span />
-          </button>
-        </footer>
+            {animal && care && (
+              <div className="fos-tasks">
+                <Task kind="clean" c={care.clean} onPress={press} />
+                <Task kind="feed" c={care.feed} onPress={press} />
+              </div>
+            )}
+            <button className="fos-menu" onClick={onClose} aria-label="Close">
+              <span />
+              <span />
+              <span />
+            </button>
+          </footer>
+        </div>
       </div>
 
       {confirm && (

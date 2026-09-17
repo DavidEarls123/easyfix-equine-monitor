@@ -157,6 +157,30 @@ Rounds are spread across a working day and a box only counts as behind once a sl
 has passed with half an hour's grace — a yard running slightly late should not be
 nagged by its own walls.
 
+## Racing colours and coat colours
+
+The silks in `public/silks` are the real registered sets, supplied as artwork
+rather than drawn — a groom recognises a horse by its colours on the box front
+long before they read the name, and an approximation of somebody's registered
+colours is worse than none at all. A horse carries a `silks` id chosen on its
+profile; where the owner's name matches a supplied set it is offered on import.
+Until one is chosen the horse shows a blank set rather than a guess.
+
+Coat colour is the closed list a passport uses — bay, dark bay, liver chestnut,
+roan, piebald and the rest — each carrying the two tones the app draws it in:
+the body, and the points, because on most colours those differ and that is what
+makes a drawn horse read as the right colour. It is selectable on the profile
+until a passport source fills it in, and one list feeds the camera, the swatches
+and the stall screen.
+
+## What the stall screen needs
+
+The profile form marks every field that reaches the panel on the box front, so
+the yard can see what a groom will be looking at rather than finding out later:
+name, age, sex, type, owner, sire, dam, groom and colours. The note along the
+bottom of that panel is written from the web app, and every note is kept — what
+was on a box and when is part of the record, not something to overwrite.
+
 ## Learning each horse
 
 A fixed threshold is the right shape for the box and the wrong shape for the

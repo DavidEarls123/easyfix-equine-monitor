@@ -3,6 +3,7 @@
 
 import { useEffect } from "react";
 import Icon from "./Icons";
+import { colourOf } from "../lib/colours";
 
 /* --------------------------------- format --------------------------------- */
 
@@ -145,17 +146,10 @@ export function Modal({ title, onClose, children, footer, wide }) {
   );
 }
 
-/* A horse's colour, as a swatch — quicker to scan a list by than a name. */
-const COAT = {
-  Bay: "#7b4b25",
-  "Dark Bay": "#4d2f1c",
-  Brown: "#5d4130",
-  Chestnut: "#a85b28",
-  Grey: "#9aa7b4",
-  Black: "#2b2b2b",
-};
+/* A horse's colour, as a swatch — quicker to scan a list by than a name. The
+   ring is the points colour, so a bay and a chestnut differ at a glance. */
 export function Coat({ animal, size = 30 }) {
-  const c = COAT[animal?.colour] || "#7b4b25";
+  const c = colourOf(animal?.colour);
   const initials = (animal?.name || "?")
     .split(" ")
     .slice(0, 2)
@@ -164,19 +158,21 @@ export function Coat({ animal, size = 30 }) {
     .toUpperCase();
   return (
     <span
-      title={animal?.colour}
+      title={`${c.label} — ${c.hint}`}
       style={{
         width: size,
         height: size,
         borderRadius: "50%",
-        background: `linear-gradient(160deg, ${c}, ${c}bb)`,
+        background: `linear-gradient(160deg, ${c.body}, ${c.body}cc)`,
+        boxShadow: `inset 0 0 0 ${Math.max(2, size * 0.09)}px ${c.points}`,
         color: "#fff",
         display: "grid",
         placeItems: "center",
-        fontSize: size * 0.36,
+        fontSize: size * 0.33,
         fontWeight: 700,
         flex: "none",
         letterSpacing: "-0.02em",
+        textShadow: "0 1px 2px rgba(0,0,0,0.45)",
       }}
     >
       {initials}

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "bective-stud",
+    "label": "Bective Stud",
+    "stock": false
+  },
+  {
+    "id": "cullentra-racing-club",
+    "label": "Cullentra Racing Club",
+    "stock": false
+  },
+  {
+    "id": "d-j-barry",
+    "label": "D J Barry",
+    "stock": false
+  },
+  {
+    "id": "david-l-estrange",
+    "label": "David L'Estrange",
+    "stock": false
+  },
+  {
+    "id": "easyfix",
+    "label": "EASYFIX",
+    "stock": false
+  },
+  {
+    "id": "gigginstown-house-stud",
+    "label": "Gigginstown House Stud",
+    "stock": false
+  },
+  {
+    "id": "gordon-elliott",
+    "label": "Gordon Elliott",
+    "stock": false
+  },
+  {
+    "id": "john-p-mcmanus",
+    "label": "John P McManus",
+    "stock": false
+  },
+  {
+    "id": "ktda-racing",
+    "label": "KTDA Racing",
+    "stock": false
+  },
+  {
+    "id": "m-j-hanrahan",
+    "label": "M J Hanrahan",
+    "stock": false
+  },
+  {
+    "id": "mcneill-family-patrick-scott-bryceland",
+    "label": "McNeill Family & Patrick & Scott Bryceland",
+    "stock": false
+  },
+  {
+    "id": "mrs-p-sloan",
+    "label": "Mrs P Sloan",
+    "stock": false
+  },
+  {
+    "id": "patrick-rabbitt",
+    "label": "Patrick Rabbitt",
+    "stock": false
+  },
+  {
+    "id": "r-stokes",
+    "label": "R Stokes",
+    "stock": false
+  },
+  {
+    "id": "robcour",
+    "label": "Robcour",
+    "stock": false
+  },
+  {
+    "id": "the-sundowners-partnership",
+    "label": "The Sundowners Partnership",
+    "stock": false
+  },
+  {
+    "id": "weld-spec-glasgow-ltd-dee-l-estrange",
+    "label": "Weld-Spec (Glasgow) Ltd & Dee L'Estrange",
+    "stock": false
+  },
+  {
+    "id": "black",
+    "label": "Black",
+    "stock": true
+  },
+  {
+    "id": "dark-blue",
+    "label": "Dark Blue",
+    "stock": true
+  },
+  {
+    "id": "dark-green",
+    "label": "Dark Green",
+    "stock": true
+  },
+  {
+    "id": "light-blue",
+    "label": "Light Blue",
+    "stock": true
+  },
+  {
+    "id": "maroon",
+    "label": "Maroon",
+    "stock": true
+  },
+  {
+    "id": "orange",
+    "label": "Orange",
+    "stock": true
+  },
+  {
+    "id": "pink",
+    "label": "Pink",
+    "stock": true
+  },
+  {
+    "id": "plain-10",
+    "label": "Plain 10",
+    "stock": true
+  },
+  {
+    "id": "plain-11",
+    "label": "Plain 11",
+    "stock": true
+  },
+  {
+    "id": "white",
+    "label": "White",
+    "stock": true
+  },
+  {
+    "id": "yellow",
+    "label": "Yellow",
+    "stock": true
+  }
+]

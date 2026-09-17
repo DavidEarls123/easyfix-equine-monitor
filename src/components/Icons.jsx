@@ -31,21 +31,45 @@ const P = {
   feed: "M4.8 8.6h14.4l-1.5 9.6A2.2 2.2 0 0 1 15.5 20h-7a2.2 2.2 0 0 1-2.2-1.8L4.8 8.6Zm1.6-3.2h11.2l.8 3.2H5.6l.8-3.2Z",
   clean: "M12 2.5v6.2M6 8.7h12M6.6 8.7v6.4M10.2 8.7v7.8M13.8 8.7v7.8M17.4 8.7v6.4",
   screen: "M3 5h18v11H3V5Zm6 15h6m-3-4v4",
-  /* a horse's head in profile: poll and ears, long face, jaw, throat */
+  /* a horse's head in profile, facing left: face, muzzle, jaw, crest, ears, eye */
   head:
-    "M9.2 4.2C11.5 4.6 13 6.2 13.8 8.4c.8 2.2 2.8 4.6 4.8 6.8 1 1.1.8 2.6-.4 3.2-1.2.6-2.6 0-3.8-.8-1.6-1-3.4-1.4-4.8-.6-1.2.7-1.6 2.2-1.6 4H5.2c0-3-.2-6 .4-8.6.5-2.4 1-4.8 1.4-6.8Z" +
-    "M7 5.6 5.6 2.2l2.6 1.6M9.4 4.2 10 .9l1.8 2.8M10.7 8.7h.02",
-  /* a jockey's helmet: dome, peak and chin strap */
-  helmet: "M4.3 14.5a7.7 7.7 0 0 1 15.4 0M3 14.5h18.5l-1.6 2.6H4.6L3 14.5ZM8.4 17.1c.5 2 2 3.2 3.6 3.2",
-  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-14v5l3 2",
-  download: "M12 4v10m0 0 4-4m-4 4-4-4M4 19h16",
-  refresh: "M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4",
-  filter: "M4 5h16l-6 7v6l-4 2v-8L4 5Z",
-  drop: "M12 3s6 6.5 6 10.5A6 6 0 0 1 6 13.5C6 9.5 12 3 12 3Z",
-  id: "M3 5h18v14H3V5Zm5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 17c.6-2 1.8-3 3-3s2.4 1 3 3m3-8h5m-5 4h5",
+    "M4.3 15.4C4.1 12.6 5.4 9.6 7.7 7.1 8.7 6 9.9 5.2 11.2 4.8" +
+    "C14.8 5.2 17.6 7.6 19.4 11 20.8 13.7 21.6 16.9 21.7 20.4" +
+    "M4.3 15.4c-1.1.8-1.2 2.3-.2 3.1.7.6 1.7.6 2.4.1" +
+    "M6.5 18.6c2.3.5 4.6-.5 6-2.4.9-1.2 1.4-2.6 1.5-4.1" +
+    "M13.4 15c.9 1.9 1.3 4 1.2 6.4" +
+    "M9.6 5.6 8.8 1.4l2.6 2.8M11.9 4.8l1-3.6 1.4 3.2" +
+    "M9.2 10.6h.02",
+  /* a box waiting for a horse */
+  nobox: "M4 8h16v12H4V8Zm3-4h10M12 12v5M9.5 14.5h5",
+};
+
+/* a few icons are silhouettes rather than line work, because that is what they
+   are in the wild — a jockey's helmet drawn in outline reads as a mushroom */
+const FILLED = {
+  helmet:
+    "M12 3.3c4.3 0 7.8 3.4 8 7.7h1.6c.7 0 1.2.6 1.1 1.3-.1.6-.6 1-1.2 1H12.9" +
+    "c-.3 1.6-.9 3-1.8 4-1 1.2-2.3 1.9-3.7 2-.5 0-.9-.4-.9-.9s.4-.9.9-.9" +
+    "c1-.1 1.9-.6 2.6-1.4.6-.7 1.1-1.7 1.3-2.8H2.8c-.7 0-1.2-.5-1.2-1.2S2.1 11 2.8 11H4" +
+    "c.2-4.3 3.7-7.7 8-7.7Z",
 };
 
 export default function Icon({ name, size = 18, stroke = 1.8, style, className }) {
+  if (FILLED[name])
+    return (
+      <svg
+        className={className}
+        style={style}
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d={FILLED[name]} />
+      </svg>
+    );
   const d = P[name] || P.dashboard;
   return (
     <svg

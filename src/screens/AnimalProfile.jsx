@@ -5,7 +5,7 @@
 
 import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
-import { Card, Coat, Empty, Field, Modal, Pill, Tabs, Tile, ago, hhmm } from "../components/ui";
+import { Card, Coat, Empty, Field, Modal, Pill, Tabs, Tile, ago, dmy, hhmm } from "../components/ui";
 import AlertList from "../components/AlertList";
 import { BarChart, C, Gauge, LineChart } from "../components/charts";
 import { NoteModal } from "./Animals";
@@ -17,6 +17,8 @@ import { welfareIndex, welfareTrend } from "../lib/score";
 import { activityDeviation, intakeDeviation, learnedBaseline } from "../lib/baseline";
 import { WelfareBreakdown, WelfareRing, WelfareTrend } from "../components/Welfare";
 import FrontOfStall from "../components/FrontOfStall";
+import Silks, { SILKS_LIST, silksForOwner } from "../components/Silks";
+import { COLOURS, colourOf } from "../lib/colours";
 import { CARE, careToday } from "../lib/care";
 import { BEHAVIOUR, DAY_MS, behaviourDay, cameraEvents, dayReadings, startOfDay } from "../lib/sim";
 
@@ -443,53 +445,207 @@ function MoveModal({ animal, stall, onClose }) {
   );
 }
 
+/**
+ * The profile the stall screen reads from.
+ *
+ * Everything marked "on the stall screen" appears on the panel on the front of
+ * the box, so the form says so rather than leaving the yard to find out by
+ * looking. Until a passport source fills these in they are typed here.
+ */
 function EditModal({ animal, onClose, onRemove }) {
-  const { actions } = useWorld();
-  const [draft, setDraft] = useState(animal);
+  const { world, actions } = useWorld();
+  const [draft, setDraft] = useState({ ...animal });
+  const [confirm, setConfirm] = useState(false);
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }));
+  const grooms = (world.staff || []).filter((p) => (p.groups || []).includes("yard"));
+
+  const onScreen = (label) => (
+    <>
+      {label}
+      <span className="screen-tag" title="Shown on the screen on the front of the box">
+        <Icon name="screen" size={10} /> screen
+      </span>
+    </>
+  );
+
+  const save = () => {
+    actions.updateAnimal(animal.id, {
+      name: draft.name.trim() || animal.name,
+      foaled: draft.foaled,
+      sex: draft.sex,
+      colour: draft.colour,
+      owner: draft.owner,
+      sire: draft.sire,
+      dam: draft.dam,
+      groom: draft.groom,
+      silks: draft.silks || null,
+      trainer: draft.trainer,
+      goalL: Number(draft.goalL) || 35,
+    });
+    onClose();
+  };
+
   return (
     <Modal
       title={`Edit ${animal.name}`}
+      wide
       onClose={onClose}
       footer={
         <>
-          <button
-            className="btn danger"
-            onClick={() => {
-              onRemove();
-              onClose();
-              go("animals");
-            }}
-          >
+          <button className="btn danger" style={{ marginRight: "auto" }} onClick={() => setConfirm(true)}>
             <Icon name="trash" size={15} /> Remove profile
           </button>
-          <button
-            className="btn pri"
-            onClick={() => {
-              actions.updateAnimal(animal.id, { name: draft.name, goalL: Number(draft.goalL) || 35, owner: draft.owner, trainer: draft.trainer });
-              onClose();
-            }}
-          >
-            Save
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn pri" onClick={save}>
+            <Icon name="check" size={15} /> Save
           </button>
         </>
       }
     >
-      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Name">
-          <input className="inp" value={draft.name} onChange={(e) => set("name", e.target.value)} />
+      <div className="grid" style={{ gap: 14 }}>
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <Field label={onScreen("Name")}>
+            <input className="inp" value={draft.name} onChange={(e) => set("name", e.target.value)} />
+          </Field>
+          <Field label={onScreen("Age")} hint="From the foaling date, as a passport reads it">
+            <input className="inp" type="date" value={draft.foaled || ""} onChange={(e) => set("foaled", e.target.value)} />
+          </Field>
+          <Field label={onScreen("Sex")}>
+            <select className="sel" value={draft.sex || ""} onChange={(e) => set("sex", e.target.value)}>
+              {["Gelding", "Mare", "Filly", "Colt", "Stallion", "Rig"].map((x) => (
+                <option key={x}>{x}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <Field label={onScreen("Type")} hint={colourOf(draft.colour).hint}>
+            <select className="sel" value={draft.colour || "Bay"} onChange={(e) => set("colour", e.target.value)}>
+              {COLOURS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={onScreen("Sire")}>
+            <input className="inp" value={draft.sire || ""} onChange={(e) => set("sire", e.target.value)} />
+          </Field>
+          <Field label={onScreen("Dam")}>
+            <input className="inp" value={draft.dam || ""} onChange={(e) => set("dam", e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <Field label={onScreen("Owner")}>
+            <input className="inp" value={draft.owner || ""} onChange={(e) => set("owner", e.target.value)} />
+          </Field>
+          <Field label={onScreen("Groom")} hint="Whoever does this box">
+            <input
+              className="inp"
+              list="groom-list"
+              value={draft.groom || ""}
+              onChange={(e) => set("groom", e.target.value)}
+            />
+            <datalist id="groom-list">
+              {grooms.map((p) => (
+                <option key={p.id} value={p.name} />
+              ))}
+            </datalist>
+          </Field>
+          <Field label="Trainer">
+            <input className="inp" value={draft.trainer || ""} onChange={(e) => set("trainer", e.target.value)} />
+          </Field>
+        </div>
+
+        <Field
+          label={onScreen("Colours")}
+          hint="The owner's registered racing colours. These are the supplied sets."
+        >
+          <SilksPicker value={draft.silks} owner={draft.owner} onChange={(v) => set("silks", v)} />
         </Field>
-        <Field label="Daily water goal (L)">
-          <input className="inp nums" type="number" min="10" max="80" value={draft.goalL} onChange={(e) => set("goalL", e.target.value)} />
+
+        <Field label="Daily water goal (L)" hint="Only used until the app has learned this horse">
+          <input
+            className="inp nums"
+            style={{ maxWidth: 140 }}
+            type="number"
+            min="10"
+            max="80"
+            value={draft.goalL}
+            onChange={(e) => set("goalL", e.target.value)}
+          />
         </Field>
-        <Field label="Owner">
-          <input className="inp" value={draft.owner || ""} onChange={(e) => set("owner", e.target.value)} />
-        </Field>
-        <Field label="Trainer">
-          <input className="inp" value={draft.trainer || ""} onChange={(e) => set("trainer", e.target.value)} />
-        </Field>
+
+        {confirm && (
+          <div className="rec" style={{ background: "#fef4f4", borderColor: "#f2cccc" }}>
+            <div className="rec-hd" style={{ color: "#a92c2c" }}>Remove {animal.name}</div>
+            <p>The profile and its history go. The box stays and becomes empty.</p>
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <button className="btn sm" onClick={() => setConfirm(false)}>
+                Keep it
+              </button>
+              <button
+                className="btn sm danger"
+                onClick={() => {
+                  onRemove();
+                  onClose();
+                  go("animals");
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
+  );
+}
+
+/** Pick a set of registered colours, or none. */
+function SilksPicker({ value, owner, onChange }) {
+  const [q, setQ] = useState("");
+  const suggested = silksForOwner(owner);
+  const needle = q.trim().toLowerCase();
+  const list = SILKS_LIST.filter((s) => !needle || s.label.toLowerCase().includes(needle));
+
+  return (
+    <div>
+      {suggested && suggested.id !== value && (
+        <button className="btn sm" style={{ marginBottom: 8 }} onClick={() => onChange(suggested.id)}>
+          Use {suggested.label}'s registered colours
+        </button>
+      )}
+      <input
+        className="inp"
+        placeholder="Search colours by owner"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        style={{ marginBottom: 8 }}
+      />
+      <div className="silks-grid">
+        <button className={`silks-opt ${!value ? "on" : ""}`} onClick={() => onChange(null)} type="button">
+          <span className="silks-none" style={{ width: 33, height: 44 }} />
+          <span>None</span>
+        </button>
+        {list.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`silks-opt ${value === s.id ? "on" : ""}`}
+            onClick={() => onChange(s.id)}
+            title={s.label}
+          >
+            <Silks id={s.id} size={44} />
+            <span>{s.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -585,6 +741,8 @@ function CareCard({ animal, now }) {
   const { world, actions } = useWorld();
   const care = careToday(world, animal, now);
   const [note, setNote] = useState(animal.stallNote || "");
+  const [history, setHistory] = useState(false);
+  const send = () => note.trim() && actions.setStallNote(animal.id, note.trim(), world.settings.operator);
 
   const row = (kind) => {
     const c = care[kind];
@@ -629,20 +787,45 @@ function CareCard({ animal, now }) {
     <div className="grid" style={{ gap: 12 }}>
       {row("feed")}
       {row("clean")}
-      <Field label="Note on the stall screen" hint="Shown on the box front until it is cleared.">
+      <Field label="Note on the stall screen" hint="Shown on the box front until it is replaced or cleared.">
         <div className="row" style={{ gap: 8 }}>
           <input
             className="inp"
             value={note}
             placeholder="e.g. Racing Thursday — cheekpieces"
             onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && actions.setStallNote(animal.id, note.trim())}
+            onKeyDown={(e) => e.key === "Enter" && send()}
           />
-          <button className="btn" onClick={() => actions.setStallNote(animal.id, note.trim())}>
-            Send
+          <button className="btn act" disabled={!note.trim() || note.trim() === animal.stallNote} onClick={send}>
+            <Icon name="screen" size={14} /> Send to the box
           </button>
+          {animal.stallNote && (
+            <button className="btn ghost" onClick={() => { actions.setStallNote(animal.id, "", world.settings.operator); setNote(""); }}>
+              Clear
+            </button>
+          )}
         </div>
       </Field>
+
+      {(animal.noteLog || []).length > 0 && (
+        <div>
+          <button className="btn sm ghost" onClick={() => setHistory((h) => !h)}>
+            <Icon name="clock" size={13} /> {history ? "Hide" : "Show"} note history ({animal.noteLog.length})
+          </button>
+          {history && (
+            <div className="note-log">
+              {animal.noteLog.map((n, i) => (
+                <div className="note-log-row" key={`${n.at}-${i}`}>
+                  <span className="tiny mute nums">{dmy(n.at)} {hhmm(n.at)}</span>
+                  <span className="grow">{n.text}</span>
+                  <span className="tiny mute">{n.by}</span>
+                  {i === 0 && animal.stallNote === n.text && <Pill tone="good">On the box now</Pill>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

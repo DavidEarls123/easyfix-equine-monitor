@@ -247,10 +247,19 @@ export function WorldProvider({ children }) {
           return w;
         });
       },
-      /** The line the grooms see on the screen on the front of the box. */
-      setStallNote(animalId, text) {
+      /**
+       * The line the grooms see on the screen on the front of the box.
+       * Every note is kept — what was on the box and when is part of the record,
+       * not something to be overwritten.
+       */
+      setStallNote(animalId, text, by) {
+        const entry = text ? { at: Date.now(), text, by: by || "Yard" } : null;
         edit((w) => {
-          w.animals = w.animals.map((a) => (a.id === animalId ? { ...a, stallNote: text } : a));
+          w.animals = w.animals.map((a) =>
+            a.id === animalId
+              ? { ...a, stallNote: text, noteLog: entry ? [entry, ...(a.noteLog || [])].slice(0, 200) : a.noteLog }
+              : a
+          );
           return w;
         });
         say(text ? "Sent to the stall screen" : "Cleared from the stall screen");

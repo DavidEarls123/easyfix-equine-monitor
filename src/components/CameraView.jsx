@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from "react";
 import { BEHAVIOUR, behaviourAt, identityCheck } from "../lib/sim";
+import { COLOURS } from "../lib/colours";
 
 const W = 640;
 const H = 360;
@@ -61,14 +62,18 @@ const NIGHT = {
   ink: "#c6f5d6",
 };
 
-const COAT = {
-  Bay: ["#8a5527", "#6b3f1c", "#221708"],
-  "Dark Bay": ["#59371f", "#3e2515", "#170f07"],
-  Brown: ["#6b4b36", "#4e3625", "#201710"],
-  Chestnut: ["#b4652c", "#8f4d1f", "#6d3a15"],
-  Grey: ["#c6c9ce", "#a2a8b0", "#6f757d"],
-  Black: ["#38332f", "#241f1c", "#100e0d"],
-};
+/* body, shade, points — the shade is the body darkened for the belly gradient */
+const COAT = Object.fromEntries(
+  COLOURS.map((c) => [c.id, [c.body, shade(c.body, 0.72), c.points]])
+);
+
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * k);
+  const g = Math.round(((n >> 8) & 255) * k);
+  const b = Math.round((n & 255) * k);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
 
 const isNight = (ms) => {
   const h = new Date(ms).getHours();

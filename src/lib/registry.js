@@ -69,13 +69,25 @@ const BREEDERS = [
   "Knockeen Bloodstock",
   "Slievenamon Stud",
 ];
+/* real owners, so their registered colours in public/silks actually match */
 const OWNERS = [
-  "Clonmel Bloodstock Ltd",
-  "Suirvalley Racing Club",
-  "K. & M. Devereux",
-  "Anner Syndicate",
-  "Riverstown Partnership",
-  "EASYFIX Racing",
+  "Bective Stud",
+  "Cullentra Racing Club",
+  "D J Barry",
+  "David L'Estrange",
+  "EASYFIX",
+  "Gigginstown House Stud",
+  "Gordon Elliott",
+  "John P McManus",
+  "KTDA Racing",
+  "M J Hanrahan",
+  "McNeill Family & Patrick & Scott Bryceland",
+  "Mrs P Sloan",
+  "Patrick Rabbitt",
+  "R Stokes",
+  "Robcour",
+  "The Sundowners Partnership",
+  "Weld-Spec (Glasgow) Ltd & Dee L'Estrange"
 ];
 
 const digits = (seed, n) =>

@@ -13,8 +13,9 @@ import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
 import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
 import { DEFAULT_LOTS } from "./staff";
+import { silksForOwner } from "../components/Silks";
 
-export const VERSION = 9;
+export const VERSION = 10;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -50,6 +51,8 @@ export const DEFAULT_SETTINGS = {
   care: { ...DEFAULT_CARE },
   // the lots the string goes out in; a yard sets its own
   lots: DEFAULT_LOTS.map((l) => ({ ...l })),
+  // the hour a published morning goes out, if it is not sent there and then
+  ridesSendAt: "05:30",
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
 };
 
@@ -174,6 +177,11 @@ export function animalFromRecord(rec, extra = {}) {
     source: rec.source,
     goalL: 35,
     scenario: "normal",
+    groom: "",
+    // the owner's registered colours, matched on import where we hold them
+    silks: silksForOwner(rec.owner)?.id || null,
+    stallNote: "",
+    noteLog: [],
     seenAs: null,
     notes: [],
     joined: Date.now(),
@@ -363,8 +371,11 @@ function seedCare(world) {
     Mordor: "Top door open, box runs warm",
     "Casheldale Lad": "Extra bedding, skip out again this evening",
   };
-  world.animals.forEach((a) => {
-    if (notes[a.name]) a.stallNote = notes[a.name];
+  world.animals.forEach((a, i) => {
+    if (notes[a.name]) {
+      a.stallNote = notes[a.name];
+      a.noteLog = [{ at: Date.now() - 3600000 * (2 + (i % 9)), text: notes[a.name], by: "Declan Murphy" }];
+    }
   });
   return world;
 }
@@ -408,6 +419,12 @@ function seedStaff(world) {
       // most riders are out, one or two are not — a day off, a bad back
       riding: !groups.includes("riders") ? false : noise(`ride|${name}`) > 0.12,
     };
+  });
+
+  // every box has somebody who does it, and the stall screen names them
+  const yardHands = world.staff.filter((p) => p.groups.includes("yard"));
+  world.animals.forEach((a, i) => {
+    if (!a.groom && yardHands.length) a.groom = yardHands[i % yardHands.length].name;
   });
   return world;
 }

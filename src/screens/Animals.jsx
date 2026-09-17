@@ -12,7 +12,7 @@ import { ageOf } from "../lib/registry";
 const TABS = [
   { id: "occupied", label: "Occupied", icon: "barn" },
   { id: "all", label: "All profiles", icon: "head" },
-  { id: "free", label: "Without a box", icon: "barn" },
+  { id: "free", label: "Without a box", icon: "nobox" },
 ];
 
 export default function Animals({ snap }) {

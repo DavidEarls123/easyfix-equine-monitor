@@ -56,7 +56,14 @@ export default function Barns({ snap }) {
           const tone = r.occupied ? worstTone(water.tone, temp.tone, air.tone, alertTone) : "flat";
 
           return (
-            <div key={b.id} className={`barn-card ${b.configured ? "" : "empty-state"} ${tone}`}>
+            <div
+              key={b.id}
+              className={`barn-card ${b.configured ? "open" : "empty-state"} ${tone}`}
+              role={b.configured ? "button" : undefined}
+              tabIndex={b.configured ? 0 : undefined}
+              onClick={b.configured ? () => go(`barn/${b.id}`) : undefined}
+              onKeyDown={(e) => b.configured && (e.key === "Enter" || e.key === " ") && go(`barn/${b.id}`)}
+            >
               <header className="bc-hd">
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="row" style={{ gap: 8 }}>
@@ -64,7 +71,7 @@ export default function Barns({ snap }) {
                     <button
                       className="icon-btn sm"
                       title="Rename this barn"
-                      onClick={() => setRenaming({ id: b.id, name: b.name })}
+                      onClick={(e) => { e.stopPropagation(); setRenaming({ id: b.id, name: b.name }); }}
                     >
                       <Icon name="edit" size={14} />
                     </button>
@@ -106,13 +113,10 @@ export default function Barns({ snap }) {
                       {alerts ? `${alerts} open` : "All clear"}
                     </Pill>
                     <div className="row" style={{ gap: 6, marginLeft: "auto" }}>
-                      <button className="btn sm" onClick={() => go(`barn/${b.id}`)}>
-                        <Icon name="grid" size={14} /> Open
-                      </button>
-                      <button className="icon-btn" title="Barn alerts" onClick={() => go(`alerts?barn=${b.id}`)}>
+                      <button className="icon-btn" title="Barn alerts" onClick={(e) => { e.stopPropagation(); go(`alerts?barn=${b.id}`); }}>
                         <Icon name="bell" size={16} />
                       </button>
-                      <button className="icon-btn" title="Cameras" onClick={() => go(`video?barn=${b.id}`)}>
+                      <button className="icon-btn" title="Cameras" onClick={(e) => { e.stopPropagation(); go(`video?barn=${b.id}`); }}>
                         <Icon name="video" size={16} />
                       </button>
                     </div>
@@ -123,7 +127,7 @@ export default function Barns({ snap }) {
                   <div className="small mute" style={{ lineHeight: 1.6, marginBottom: 12 }}>
                     Nothing in this building is monitored until the boxes are placed.
                   </div>
-                  <button className="btn pri sm" onClick={() => go(`barn/${b.id}?t=layout`)}>
+                  <button className="btn pri sm" onClick={(e) => { e.stopPropagation(); go(`barn/${b.id}?t=layout`); }}>
                     <Icon name="edit" size={14} /> Set up layout
                   </button>
                 </div>

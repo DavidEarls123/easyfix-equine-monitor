@@ -22,7 +22,6 @@ const TABS = [
   { id: "overview", label: "Overview", icon: "grid" },
   { id: "door", label: "Barn screen", icon: "screen" },
   { id: "stock", label: "Stock", icon: "stock" },
-  { id: "layout", label: "Barn", icon: "barn" },
 ];
 
 export default function BarnDetail({ id, tab = "overview", snap }) {
@@ -39,7 +38,8 @@ export default function BarnDetail({ id, tab = "overview", snap }) {
     (a, b) => ({ critical: 0, serious: 1, warning: 2, info: 3, good: 4 }[a.severity] - { critical: 0, serious: 1, warning: 2, info: 3, good: 4 }[b.severity])
   );
 
-  const at = TABS.some((t) => t.id === tab) ? tab : "overview";
+  // layout is not a tab any more — it is opened from Barn settings
+  const at = tab === "layout" || TABS.some((t) => t.id === tab) ? tab : "overview";
 
   return (
     <>

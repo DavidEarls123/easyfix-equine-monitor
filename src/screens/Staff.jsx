@@ -160,6 +160,7 @@ export default function Staff() {
                   <b>{m.subject}</b>
                   <Pill tone="flat">{m.audience}</Pill>
                   <Pill tone="good">{m.recipients} sent</Pill>
+                  {m.scheduledFor && <Pill tone="warning">Goes out {m.scheduledFor}</Pill>}
                   <span className="when">{ago(m.at, now)}</span>
                 </div>
                 <div className="why" style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>

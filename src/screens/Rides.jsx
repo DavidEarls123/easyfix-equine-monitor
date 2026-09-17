@@ -82,9 +82,6 @@ export default function Rides() {
           <button className="btn" onClick={() => go("board")}>
             <Icon name="screen" size={15} /> Yard board
           </button>
-          <button className="btn" disabled={!summary.rides} onClick={saveDraft}>
-            <Icon name="check" size={15} /> Save
-          </button>
           <button className="btn pri" disabled={!summary.rides} onClick={() => setSending(true)}>
             <Icon name="bell" size={15} /> Publish
           </button>
@@ -135,12 +132,8 @@ export default function Rides() {
           title={`${lot?.label} — ${lot?.time}`}
           sub={`${lot?.rides.filter((r) => r.animalId).length || 0} of ${riders.length} riders have a horse`}
           right={
-            <button
-              className="btn sm"
-              disabled={!lot?.rides.length}
-              onClick={() => lot.rides.forEach((r) => actions.clearRide(now, lot.id, r.id))}
-            >
-              Clear this lot
+            <button className="btn sm act" disabled={!summary.rides} onClick={saveDraft}>
+              <Icon name="check" size={14} /> Save the morning
             </button>
           }
         >
@@ -178,7 +171,7 @@ export default function Rides() {
                     </div>
                     {animal ? (
                       <div className="rc-horse">
-                        <Silks owner={animal.owner} size={26} showCap={false} />
+                        <Silks animal={animal} size={26} />
                         <div className="grow" style={{ minWidth: 0 }}>
                           <b>{animal.name}</b>
                           <div className="tiny mute">{boxOf(world, animal)}</div>
@@ -200,6 +193,18 @@ export default function Rides() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* the destructive one lives at the foot, clear of everything else */}
+          {lot?.rides.length > 0 && (
+            <div className="lot-foot">
+              <button
+                className="btn sm ghost"
+                onClick={() => lot.rides.forEach((r) => actions.clearRide(now, lot.id, r.id))}
+              >
+                <Icon name="close" size={13} /> Clear {lot.label}
+              </button>
             </div>
           )}
         </Card>
@@ -338,99 +343,113 @@ function RiderPicker({ onClose }) {
 
 /* --------------------------- sending the morning --------------------------- */
 
+/**
+ * Publishing the morning.
+ *
+ * One message per rider, carrying every ride they have across every lot —
+ * a rider down for three lots gets one text listing three, not three texts.
+ * It goes now, or it waits for the hour the yard sends at.
+ */
 function SendList({ plan, onClose }) {
   const { world, now, actions } = useWorld();
   const yardName = world.yards[0]?.name || "Yard";
+  const [when, setWhen] = useState("now");
+  const [at, setAt] = useState(world.settings.ridesSendAt || "05:30");
   const messages = availableRiders(world.staff)
     .map((p) => morningMessage(plan, p, world.animals, yardName))
     .filter(Boolean);
+  const totalRides = messages.reduce((n, m) => n + m.rideCount, 0);
 
   const send = () => {
+    if (when === "at" && at !== world.settings.ridesSendAt) actions.setSettings({ ridesSendAt: at });
     actions.sendMessage({
       subject: `${yardName}: rides for ${new Date(now).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}`,
-      body: messages.map((m) => `${m.to.name}\n${m.body.split("\n").slice(2, -2).join("\n")}`).join("\n\n"),
+      body: messages
+        .map((m) => `${m.to.name} (${m.rideCount})\n${m.body.split("\n").slice(2, -2).join("\n")}`)
+        .join("\n\n"),
       audience: "Riders with a ride",
       recipients: messages.length,
-      channels: ["email", "push"],
+      channels: ["sms", "push"],
       to: messages.map((m) => m.to.id),
+      scheduledFor: when === "at" ? at : null,
     });
+    actions.markPlanSaved(now);
     onClose();
   };
 
   return (
     <Modal
-      title="Send the morning list"
+      title="Publish the morning"
       wide
       onClose={onClose}
       footer={
         <>
           <span className="small mute" style={{ marginRight: "auto" }}>
-            Each rider gets only their own rides.
+            {messages.length} riders · {totalRides} rides · one message each
           </span>
           <button className="btn" onClick={onClose}>
             Cancel
           </button>
           <button className="btn pri" disabled={!messages.length} onClick={send}>
-            <Icon name="check" size={15} /> Send to {messages.length} riders
+            <Icon name="check" size={15} /> {when === "now" ? `Send to ${messages.length} now` : `Schedule for ${at}`}
           </button>
         </>
       }
     >
-      {!messages.length && <Empty icon="bell">Nothing is assigned yet.</Empty>}
-      <div className="grid" style={{ gap: 10, maxHeight: 420, overflowY: "auto" }}>
-        {messages.map((m) => (
-          <div className="msg-preview" key={m.to.id}>
-            <div className="row" style={{ gap: 8 }}>
-              <b>{m.to.name}</b>
-              <Pill tone="flat">{m.rideCount} ride{m.rideCount === 1 ? "" : "s"}</Pill>
-              <span className="tiny mute" style={{ marginLeft: "auto" }}>{m.to.email}</span>
+      {!messages.length ? (
+        <Empty icon="bell">Nothing is assigned yet.</Empty>
+      ) : (
+        <div className="grid" style={{ gap: 14 }}>
+          <Field label="When it goes">
+            <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className={`grp-pick ${when === "now" ? "on" : ""}`}
+                onClick={() => setWhen("now")}
+              >
+                Send now
+              </button>
+              <button
+                type="button"
+                className={`grp-pick ${when === "at" ? "on" : ""}`}
+                onClick={() => setWhen("at")}
+              >
+                Send in the morning
+              </button>
+              {when === "at" && (
+                <input
+                  className="inp nums"
+                  style={{ width: 110 }}
+                  type="time"
+                  value={at}
+                  onChange={(e) => setAt(e.target.value)}
+                />
+              )}
             </div>
-            <pre>{m.body}</pre>
+          </Field>
+
+          <div className="hint">
+            Each rider gets one message with all of their lots in it. Riders with nothing down are not messaged.
           </div>
-        ))}
-      </div>
-    </Modal>
-  );
-}
 
-/* ---------------------------- the message preview -------------------------- */
-
-/** The message itself, on a phone, so a manager can see what they are sending. */
-function RideTextPreview({ plan, riderId }) {
-  const { world, now } = useWorld();
-  const yardName = world.yards[0]?.name || "Yard";
-  const riders = availableRiders(world.staff);
-  const chosen =
-    (riderId && riders.find((p) => p.id === riderId)) ||
-    riders.find((p) => ridesOf(plan, p.id).length) ||
-    riders[0];
-  const msg = chosen ? morningMessage(plan, chosen, world.animals, yardName) : null;
-
-  if (!chosen) return <div className="small mute">Nobody is marked as riding today.</div>;
-
-  return (
-    <div className="sms">
-      <div className="sms-hd">
-        <Icon name="bell" size={13} />
-        <b>{chosen.name}</b>
-        <span className="tiny mute" style={{ marginLeft: "auto" }}>{chosen.phone}</span>
-      </div>
-      <div className="sms-body">
-        {msg ? (
-          <div className="sms-bubble">
-            <div className="sms-subject">{msg.subject}</div>
-            {msg.body.split("\n").map((line, i) => (
-              <div key={i} className={line.trim() ? "" : "sms-gap"}>
-                {line}
+          <div className="grid" style={{ gap: 10, maxHeight: 360, overflowY: "auto" }}>
+            {messages.map((m) => (
+              <div className="msg-preview" key={m.to.id}>
+                <div className="row" style={{ gap: 8 }}>
+                  <b>{m.to.name}</b>
+                  <Pill tone="flat">
+                    {m.rideCount} ride{m.rideCount === 1 ? "" : "s"}
+                  </Pill>
+                  <span className="tiny mute" style={{ marginLeft: "auto" }}>
+                    {m.to.phone}
+                  </span>
+                </div>
+                <pre>{m.body}</pre>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="sms-bubble empty">
-            {chosen.name.split(" ")[0]} has no rides in this plan, so nothing would be sent to them.
-          </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </Modal>
   );
 }

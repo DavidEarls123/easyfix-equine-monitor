@@ -1,67 +1,52 @@
-/* The owner's racing silks, drawn from the owner's name so the same owner is
-   the same colours everywhere. A groom recognises a horse by its silks on the
-   box front long before they read the name off it. */
+/* ==========================================================================
+   Racing colours.
 
-import { noise } from "../lib/sim";
+   These are the real registered silks, supplied as artwork rather than drawn —
+   a groom recognises a horse by its colours on the box front long before they
+   read the name off it, and an approximation of someone's registered colours is
+   worse than none. `silks.json` is the index; the files sit in public/silks.
 
-const COLOURS = [
-  "#d70927", "#0d4ea0", "#f2b705", "#0f8a3c", "#ffffff", "#111827",
-  "#e86a1c", "#7b2d8b", "#12a5a5", "#8c1c3a", "#c7d1da", "#f26eb0",
-];
-const PATTERNS = ["solid", "stripes", "hoops", "chevron", "quarters", "sash", "spots"];
+   A horse carries a `silks` id set on its profile. Until one is chosen it shows
+   a blank set rather than guessing, because guessing is what this replaced.
+   ========================================================================== */
 
-/** Deterministic colours and pattern for an owner. */
-export function silksOf(owner) {
-  const s = String(owner || "House colours");
-  const pick = (salt, list) => list[Math.floor(noise(`${s}|${salt}`) * list.length) % list.length];
-  const body = pick("body", COLOURS);
-  let trim = pick("trim", COLOURS);
-  if (trim === body) trim = COLOURS[(COLOURS.indexOf(body) + 5) % COLOURS.length];
-  return { body, trim, pattern: pick("pat", PATTERNS), cap: pick("cap", COLOURS) };
-}
+import SILKS from "../lib/silks.json";
 
-export default function Silks({ owner, size = 54, showCap = true }) {
-  const { body, trim, pattern, cap } = silksOf(owner);
-  const id = `sk${String(owner || "x").replace(/\W/g, "").slice(0, 10)}`;
-  const r = 50;
+export const SILKS_LIST = SILKS;
+export const silksById = (id) => SILKS.find((s) => s.id === id) || null;
+export const silksSrc = (id) => `${import.meta.env.BASE_URL}silks/${id}.png`;
+
+/** Owners whose registered colours we hold, matched by name on import. */
+export const silksForOwner = (owner) => {
+  if (!owner) return null;
+  const want = String(owner).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return SILKS.find((s) => !s.stock && s.label.toLowerCase().replace(/[^a-z0-9]+/g, "") === want) || null;
+};
+
+export default function Silks({ animal, id, owner, size = 44, title }) {
+  // an explicit id wins, then the horse's own, then the owner's registered set
+  const chosen = id || animal?.silks || silksForOwner(owner || animal?.owner)?.id || null;
+  const meta = chosen ? silksById(chosen) : null;
+  const label = title || meta?.label || (owner ?? animal?.owner) || "No colours set";
+
+  if (!meta)
+    return (
+      <span
+        className="silks-none"
+        title={`${label} — no racing colours set`}
+        style={{ width: size * 0.75, height: size }}
+        aria-hidden="true"
+      />
+    );
 
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: size * 0.12 }} title={owner || "Owner"}>
-      <svg width={size} height={size} viewBox="0 0 100 100" aria-label={`${owner || "Owner"} colours`} role="img">
-        <defs>
-          <clipPath id={id}>
-            <circle cx="50" cy="50" r={r} />
-          </clipPath>
-        </defs>
-        <g clipPath={`url(#${id})`}>
-          <rect width="100" height="100" fill={body} />
-          {pattern === "stripes" &&
-            [0, 1, 2, 3, 4].map((i) => <rect key={i} x={i * 20 + 5} y="0" width="10" height="100" fill={trim} />)}
-          {pattern === "hoops" &&
-            [0, 1, 2, 3, 4].map((i) => <rect key={i} x="0" y={i * 20 + 5} width="100" height="10" fill={trim} />)}
-          {pattern === "chevron" &&
-            [0, 1, 2].map((i) => (
-              <path key={i} d={`M0 ${30 + i * 26} L50 ${5 + i * 26} L100 ${30 + i * 26} L100 ${44 + i * 26} L50 ${19 + i * 26} L0 ${44 + i * 26} Z`} fill={trim} />
-            ))}
-          {pattern === "quarters" && (
-            <>
-              <rect x="50" y="0" width="50" height="50" fill={trim} />
-              <rect x="0" y="50" width="50" height="50" fill={trim} />
-            </>
-          )}
-          {pattern === "sash" && <path d="M-10 70 L70 -10 L100 20 L20 100 Z" fill={trim} />}
-          {pattern === "spots" &&
-            [18, 50, 82].flatMap((x, i) =>
-              [22, 55, 88].map((y, j) => <circle key={`${i}${j}`} cx={x} cy={y} r="9" fill={trim} />)
-            )}
-        </g>
-        <circle cx="50" cy="50" r={r - 1.5} fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="3" />
-      </svg>
-      {showCap && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="46" fill={cap} stroke="rgba(255,255,255,0.75)" strokeWidth="6" />
-        </svg>
-      )}
-    </span>
+    <img
+      className="silks"
+      src={silksSrc(meta.id)}
+      alt={`${label} racing colours`}
+      title={label}
+      style={{ width: size * 0.75, height: size }}
+      loading="lazy"
+    />
   );
 }
