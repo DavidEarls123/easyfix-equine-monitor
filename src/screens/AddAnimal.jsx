@@ -9,6 +9,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../components/Icons";
 import { Coat, Field, Modal, Pill } from "../components/ui";
+import Silks, { SILKS_LIST, silksForOwner } from "../components/Silks";
+import { COLOURS, colourOf } from "../lib/colours";
 import { ageOf } from "../lib/registry";
 import { DEFAULT_PASSPORT, searchPassports, sourceLabel } from "../lib/passport";
 import { animalFromRecord } from "../lib/world";
@@ -33,6 +35,8 @@ const BLANK = {
   ueln: "",
   height: "",
   source: "Entered by hand",
+  groom: "",
+  silks: null,
 };
 
 export default function AddAnimal({ onClose, presetStallId }) {
@@ -68,7 +72,7 @@ export default function AddAnimal({ onClose, presetStallId }) {
       try {
         const { records, warning } = await searchPassports(query, cfg);
         if (seq.current !== mine) return;
-        setHits(records);
+        setHits(records.map((r) => ({ ...r, silks: r.silks || silksForOwner(r.owner)?.id || null })));
         // a fallback is not an error, but the operator should know the names
         // in front of them did not come from the provider they configured
         setErr(warning ? `${warning} Showing the simulated index instead.` : null);
@@ -92,6 +96,16 @@ export default function AddAnimal({ onClose, presetStallId }) {
     .sort((a, b) => a.barn.name.localeCompare(b.barn.name) || a.index - b.index);
 
   const set = (k, v) => setRec((r) => ({ ...r, [k]: v }));
+  const grooms = (world.staff || []).filter((p) => (p.groups || []).includes("yard"));
+
+  const onScreen = (label) => (
+    <>
+      {label}
+      <span className="screen-tag" title="Shown on the screen on the front of the box">
+        <Icon name="screen" size={10} /> screen
+      </span>
+    </>
+  );
 
   const save = () => {
     const animal = animalFromRecord(rec, { goalL: Number(goal) || 35 });
@@ -203,34 +217,68 @@ export default function AddAnimal({ onClose, presetStallId }) {
             </div>
           )}
 
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Name">
+          {/* the same set the profile edit asks for, so a horse added by hand
+              reaches the box front with everything the screen needs */}
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label={onScreen("Name")}>
               <input className="inp" value={rec.name} onChange={(e) => set("name", e.target.value)} />
             </Field>
-            <Field label="Foaled">
-              <input className="inp" type="date" value={rec.foaled} onChange={(e) => set("foaled", e.target.value)} />
+            <Field label={onScreen("Age")} hint="From the foaling date">
+              <input className="inp" type="date" value={rec.foaled || ""} onChange={(e) => set("foaled", e.target.value)} />
             </Field>
-            <Field label="Sex">
+            <Field label={onScreen("Sex")}>
               <select className="sel" value={rec.sex} onChange={(e) => set("sex", e.target.value)}>
-                {["Gelding", "Mare", "Stallion", "Colt", "Filly"].map((v) => (
+                {["Gelding", "Mare", "Filly", "Colt", "Stallion", "Rig"].map((v) => (
                   <option key={v}>{v}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Colour">
-              <select className="sel" value={rec.colour} onChange={(e) => set("colour", e.target.value)}>
-                {["Bay", "Dark Bay", "Brown", "Chestnut", "Grey", "Black"].map((v) => (
-                  <option key={v}>{v}</option>
+          </div>
+
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label={onScreen("Type")} hint={colourOf(rec.colour).hint}>
+              <select className="sel" value={rec.colour || "Bay"} onChange={(e) => set("colour", e.target.value)}>
+                {COLOURS.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
                 ))}
               </select>
             </Field>
-            <Field label="Microchip">
-              <input className="inp" value={rec.microchip} onChange={(e) => set("microchip", e.target.value)} />
+            <Field label={onScreen("Sire")}>
+              <input className="inp" value={rec.sire || ""} onChange={(e) => set("sire", e.target.value)} />
+            </Field>
+            <Field label={onScreen("Dam")}>
+              <input className="inp" value={rec.dam || ""} onChange={(e) => set("dam", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label={onScreen("Owner")}>
+              <input className="inp" value={rec.owner || ""} onChange={(e) => set("owner", e.target.value)} />
+            </Field>
+            <Field label={onScreen("Groom")} hint="Whoever will do this box">
+              <input className="inp" list="add-groom-list" value={rec.groom || ""} onChange={(e) => set("groom", e.target.value)} />
+              <datalist id="add-groom-list">
+                {grooms.map((p) => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
             </Field>
             <Field label="Trainer / handler">
-              <input className="inp" value={rec.trainer} onChange={(e) => set("trainer", e.target.value)} />
+              <input className="inp" value={rec.trainer || ""} onChange={(e) => set("trainer", e.target.value)} />
             </Field>
-            <Field label="Daily water goal" hint="Used for the intake alerts">
+          </div>
+
+          <Field label={onScreen("Colours")} hint="The owner's registered racing colours.">
+            <SilksPicker value={rec.silks} owner={rec.owner} onChange={(v) => set("silks", v)} />
+          </Field>
+
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label="Microchip">
+              <input className="inp" value={rec.microchip || ""} onChange={(e) => set("microchip", e.target.value)} />
+            </Field>
+            <Field label="Daily water goal" hint="Until the app has learned this horse">
               <div className="row" style={{ gap: 8 }}>
                 <input className="inp nums" type="number" min="10" max="80" value={goal} onChange={(e) => setGoal(e.target.value)} />
                 <span className="small mute">litres</span>
@@ -267,5 +315,48 @@ export default function AddAnimal({ onClose, presetStallId }) {
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Pick a set of registered colours, or none. */
+function SilksPicker({ value, owner, onChange }) {
+  const [q, setQ] = useState("");
+  const suggested = silksForOwner(owner);
+  const needle = q.trim().toLowerCase();
+  const list = SILKS_LIST.filter((s) => !needle || s.label.toLowerCase().includes(needle));
+
+  return (
+    <div>
+      {suggested && suggested.id !== value && (
+        <button className="btn sm" style={{ marginBottom: 8 }} onClick={() => onChange(suggested.id)}>
+          Use {suggested.label}'s registered colours
+        </button>
+      )}
+      <input
+        className="inp"
+        placeholder="Search colours by owner"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        style={{ marginBottom: 8 }}
+      />
+      <div className="silks-grid">
+        <button type="button" className={`silks-opt ${!value ? "on" : ""}`} onClick={() => onChange(null)}>
+          <span className="silks-none" style={{ width: 33, height: 44 }} />
+          <span>None</span>
+        </button>
+        {list.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`silks-opt ${value === s.id ? "on" : ""}`}
+            onClick={() => onChange(s.id)}
+            title={s.label}
+          >
+            <Silks id={s.id} size={44} />
+            <span>{s.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

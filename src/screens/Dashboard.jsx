@@ -6,6 +6,7 @@ import Icon from "../components/Icons";
 import { Card, Coat, Pill, Tile, ago } from "../components/ui";
 import AttentionList from "../components/AttentionList";
 import { WelfareBar, WelfareRing } from "../components/Welfare";
+import Silks from "../components/Silks";
 import { airStatus, tempStatus, waterStatus, worstTone } from "../lib/status";
 import { BarChart, C, LineChart, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
@@ -178,7 +179,8 @@ export default function Dashboard({ snap }) {
               >
                 <Coat animal={x.animal} size={28} />
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <div className="row" style={{ gap: 8 }}>
+                  <div className="row" style={{ gap: 7 }}>
+                    <Silks animal={x.animal} size={24} />
                     <b>{x.animal.name}</b>
                     <span className="tiny mute">{x.stall.name}</span>
                   </div>

@@ -453,3 +453,47 @@ function SendList({ plan, onClose }) {
     </Modal>
   );
 }
+
+/* ---------------------------- the message preview -------------------------- */
+
+/** The message itself, on a phone, so a manager can see what they are sending. */
+function RideTextPreview({ plan, riderId }) {
+  const { world } = useWorld();
+  const yardName = world.yards[0]?.name || "Yard";
+  const riders = availableRiders(world.staff);
+  const chosen =
+    (riderId && riders.find((p) => p.id === riderId)) ||
+    riders.find((p) => ridesOf(plan, p.id).length) ||
+    riders[0];
+  const msg = chosen ? morningMessage(plan, chosen, world.animals, yardName) : null;
+
+  if (!chosen) return <div className="small mute">Nobody is marked as riding today.</div>;
+
+  return (
+    <div className="sms">
+      <div className="sms-hd">
+        <Icon name="bell" size={13} />
+        <b>{chosen.name}</b>
+        <span className="tiny mute" style={{ marginLeft: "auto" }}>
+          {chosen.phone}
+        </span>
+      </div>
+      <div className="sms-body">
+        {msg ? (
+          <div className="sms-bubble">
+            <div className="sms-subject">{msg.subject}</div>
+            {msg.body.split("\n").map((line, i) => (
+              <div key={i} className={line.trim() ? "" : "sms-gap"}>
+                {line}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="sms-bubble empty">
+            {chosen.name.split(" ")[0]} has no rides in this plan, so nothing would be sent to them.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

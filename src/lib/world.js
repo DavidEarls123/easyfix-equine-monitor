@@ -177,9 +177,9 @@ export function animalFromRecord(rec, extra = {}) {
     source: rec.source,
     goalL: 35,
     scenario: "normal",
-    groom: "",
+    groom: rec.groom || "",
     // the owner's registered colours, matched on import where we hold them
-    silks: silksForOwner(rec.owner)?.id || null,
+    silks: rec.silks || silksForOwner(rec.owner)?.id || null,
     stallNote: "",
     noteLog: [],
     seenAs: null,

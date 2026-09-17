@@ -12,7 +12,14 @@ stall's seed, so the yard looks the same on every reload and on every machine.
 npm install
 npm run dev        # http://localhost:5173
 npm run build      # static build into dist/
+npm run smoke      # walk every route in a browser and fail on a blank screen
 ```
+
+`smoke` exists because a missing component reference is not a build error — Vite
+compiles it and React blows up at run time, leaving a blank page that a green
+build says nothing about. It walks every route and fails if one renders nothing
+or logs an error. Playwright is an optional dev dependency; without it the script
+exits quietly.
 
 ## What it demonstrates
 

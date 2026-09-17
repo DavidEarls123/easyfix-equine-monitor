@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 import Icon from "./Icons";
 import CameraView from "./CameraView";
 import { Coat, Pill, SEVERITY, ago } from "./ui";
+import Silks from "./Silks";
 import { WelfareRing } from "./Welfare";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
@@ -141,6 +142,8 @@ function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
           )}
           <span className="attn-who">
             <span className="row" style={{ gap: 9 }}>
+              {/* the colours the yard knows the horse by, beside its name */}
+              <Silks animal={g.animal} size={34} />
               <span className="nm">{g.animal.name}</span>
               <Pill tone={tone}>
                 {g.issues.length} {g.issues.length === 1 ? "issue" : "issues"}

@@ -71,13 +71,14 @@ export default function AnimalProfile({ id }) {
     <>
       <div className="page-hd">
         <div className="row" style={{ gap: 12 }}>
+          <Silks animal={animal} size={52} />
           <Coat animal={animal} size={46} />
           <div>
             <h1>{animal.name}</h1>
             <div className="sub row" style={{ gap: 8 }}>
               <Pill tone="flat">{ageOf(animal.foaled, now)} yo</Pill>
               <Pill tone="flat">{animal.sex}</Pill>
-              <Pill tone="flat">{animal.colour}</Pill>
+              <Pill tone="flat">{colourOf(animal.colour).label}</Pill>
               {stall ? (
                 <button className="lnk small" onClick={() => go(`barn/${stall.barnId}`)}>
                   {barn?.name} · {stall.name}
