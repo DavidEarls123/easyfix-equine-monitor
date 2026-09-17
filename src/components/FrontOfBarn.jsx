@@ -100,13 +100,17 @@ export default function FrontOfBarn({ roll, now }) {
             <button key={stall.id} className={`fob-box ${tone}`} onClick={() => setOpen({ stall, st })}>
               <span className="fob-box-hd">
                 <span className="fob-box-nm">{stall.name}</span>
-                <Silks animal={animal} size={22} />
+                <span className="fob-box-silks">
+                  <Silks animal={animal} size={22} />
+                </span>
               </span>
-              <span className="fob-box-an">{animal.name}</span>
-              <span className="fob-box-stats nums">
-                <i>{t.offline ? "—" : `${t.intakeL}L`}</i>
-                <i>{t.tempNow != null ? `${t.tempNow}°` : "—"}</i>
-                <i>{Math.round(t.airNow)}%</i>
+              <span className="fob-box-body">
+                <span className="fob-box-an">{animal.name}</span>
+                <span className="fob-box-stats nums">
+                  <i>{t.offline ? "—" : `${t.intakeL}L`}</i>
+                  <i>{t.tempNow != null ? `${t.tempNow}°` : "—"}</i>
+                  <i>{Math.round(t.airNow)}%</i>
+                </span>
               </span>
               <span className="fob-box-rounds">
                 <span

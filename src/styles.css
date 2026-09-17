@@ -346,9 +346,14 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .cam canvas { display: block; width: 100%; height: auto; }
 .cam .cap {
-  display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px;
+  display: flex; align-items: center; gap: 8px; padding: 7px 11px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px;
 }
-.cam .cap .st { margin-left: auto; font-size: 11px; color: #9ec0e0; }
+/* the stall name gets what it needs, the horse name takes the rest and clips */
+.cam .cap b { flex: 0 1 auto; max-width: 38%; }
+.cam .cap .nm { flex: 1 1 auto; }
+.cam .cap .silks-cell { width: 22px; }
+.cam .cap .silks-cell .silks, .cam .cap .silks-cell .silks-none { width: 18px; height: 24px; }
+.cam .cap .st { margin-left: auto; font-size: 11px; color: #9ec0e0; flex: none; white-space: nowrap; }
 .cam.offline canvas { opacity: 0.5; }
 .cam-badge {
   position: absolute; top: 8px; left: 8px; background: rgba(6, 18, 31, 0.72); color: #fff;
@@ -795,18 +800,26 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* the plan fills the frame rather than sitting at the top of it */
 .fob-plan { display: grid; gap: 8px; height: 100%; grid-auto-rows: minmax(92px, 1fr); }
 .fob-cell {
+  container-type: inline-size;
   border-radius: 8px; min-height: 96px; display: grid; place-items: center;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  font-size: clamp(8px, 4.6cqi, 15px); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.04);
   border: 1px dashed rgba(255, 255, 255, 0.1);
 }
 .fob-cell.empty { background: none; border: 0; }
 .fob-cell.aisle { background: rgba(255, 255, 255, 0.02); border-style: solid; }
 
-/* a box is a target, not a table row */
+/* A box is a target, not a table row — and it is sized by the barn it is in.
+   Each box is its own container, so everything inside it is measured in `cqi`
+   (a percentage of the box's own width) and grows or shrinks with the layout:
+   a five-box barn fills its tiles, a thirty-box barn still fits. The clamps
+   keep it readable at both ends rather than letting it run away. */
 .fob-box {
+  container-type: inline-size;
   position: relative; text-align: left; cursor: pointer; min-height: 96px;
-  border-radius: 10px; padding: 7px 8px; display: flex; flex-direction: column; gap: 2px;
+  /* the box's OWN lengths resolve against the panel, not itself, so these stay
+     in px — only its children are measured against the box */
+  border-radius: 10px; padding: 8px 9px; display: flex; flex-direction: column; gap: 2px;
   background: rgba(255, 255, 255, 0.09); color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.14); border-left: 4px solid rgba(255, 255, 255, 0.3);
   -webkit-tap-highlight-color: transparent;
@@ -818,34 +831,47 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .fob-box.serious { border-left-color: #f08a54; }
 .fob-box.critical { border-left-color: #f05a5a; background: rgba(240, 90, 90, 0.16); }
 .fob-box.free { background: rgba(255, 255, 255, 0.03); border-style: dashed; color: #8fabd0; }
-.fob-box-hd { display: flex; align-items: center; gap: 6px; }
-.fob-box-nm { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #9cb8dd; }
-.fob-box-hd > span:last-child { margin-left: auto; }
-.fob-box-an {
-  font-size: 13.5px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.fob-box-hd { display: flex; align-items: center; gap: 2cqi; }
+.fob-box-nm {
+  font-size: clamp(8px, 5.2cqi, 17px); font-weight: 800; letter-spacing: 0.07em;
+  text-transform: uppercase; color: #9cb8dd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.fob-box-free { font-size: 11px; }
-.fob-box-stats { display: flex; gap: 8px; font-size: 10.5px; color: #bcd3f0; margin-top: 1px; }
+.fob-box-hd > span:last-child { margin-left: auto; }
+/* the horse and its readings sit in the middle of whatever height the tile
+   ends up with, so a tall box is filled rather than top-heavy */
+.fob-box-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  justify-content: center; gap: 1cqi; min-width: 0;
+}
+.fob-box-an {
+  font-size: clamp(12px, 8.4cqi, 30px); font-weight: 800; line-height: 1.12; letter-spacing: -0.015em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.5cqi;
+}
+.fob-box-free { font-size: clamp(10px, 5.5cqi, 18px); }
+.fob-box-stats {
+  display: flex; gap: 3cqi; font-size: clamp(9px, 5.4cqi, 19px); color: #bcd3f0;
+  margin-top: 1cqi; flex-wrap: wrap;
+}
 .fob-box-stats i { font-style: normal; }
 .fob-box-rounds {
-  display: flex; gap: 6px; margin-top: auto; padding-top: 5px;
+  display: flex; gap: 2cqi; margin-top: 0; padding-top: 2.5cqi;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 .fob-box-rounds > span {
-  display: inline-flex; align-items: center; gap: 3px; flex: 1; min-width: 0;
-  font-size: 10px; color: #8fabd0; background: rgba(255, 255, 255, 0.07);
-  border-radius: 6px; padding: 2px 5px;
+  display: inline-flex; align-items: center; gap: 1.2cqi; flex: 1; min-width: 0;
+  font-size: clamp(8px, 4.4cqi, 15px); color: #8fabd0; background: rgba(255, 255, 255, 0.07);
+  border-radius: 6px; padding: 1.2cqi 2cqi;
 }
-.fob-box-rounds i { font-style: normal; font-weight: 800; font-size: 11px; color: #d6e7fb; }
-.fob-box-rounds em { font-style: normal; opacity: 0.7; font-size: 9px; }
+.fob-box-rounds i { font-style: normal; font-weight: 800; font-size: clamp(9px, 4.8cqi, 17px); color: #d6e7fb; }
+.fob-box-rounds em { font-style: normal; opacity: 0.7; font-size: clamp(7px, 3.8cqi, 13px); }
+.fob-box-rounds svg { width: clamp(9px, 4.6cqi, 16px); height: auto; }
 .fob-box-rounds .ok { background: rgba(53, 196, 110, 0.18); color: #8ff0b4; }
 .fob-box-rounds .ok i { color: #a9f7c6; }
 .fob-box-rounds .late { background: rgba(245, 191, 63, 0.2); color: #ffd98a; }
 .fob-box-rounds .late i { color: #ffe6ad; }
 .fob-box-rounds .ok { color: #7ff2a8; }
 .fob-box-rounds .late { color: #ffd166; }
-.fob-box-flag { position: absolute; top: 6px; right: 6px; color: #ff9c9c; display: flex; }
+.fob-box-flag { position: absolute; top: 3cqi; right: 3cqi; color: #ff9c9c; display: flex; }
 
 .fob-key {
   display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
@@ -867,10 +893,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .fob-overlay-inner { width: min(100%, 820px); }
 
+/* Each box sizes its own contents now, so the panel does not override them —
+   it only drops the row height so more of a big barn fits on one screen. */
 @container (max-width: 760px) {
-  .fob-box-an { font-size: 11.5px; }
-  .fob-cell, .fob-box { min-height: 78px; }
-  .fob-box-rounds em { display: none; }
+  .fob-cell, .fob-box { min-height: 74px; }
 }
 
 /* --------------------------------- staff ---------------------------------- */
@@ -1064,4 +1090,30 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .lot-foot {
   display: flex; justify-content: center; margin-top: 16px; padding-top: 14px;
   border-top: 1px solid var(--line);
+}
+
+/* --------------------------- colours in a list ----------------------------- */
+
+/* The silks are a fixed slot wherever they sit in a row, and the name beside
+   them truncates instead of wrapping, so one long name cannot shove a column
+   out of line or make a camera caption two lines tall. */
+.silks-cell { display: flex; align-items: center; justify-content: center; width: 30px; flex: none; }
+.silks-cell .silks, .silks-cell .silks-none { width: 22px; height: 29px; }
+.tbl td.col-silks, .tbl th.col-silks { width: 54px; padding-left: 6px; padding-right: 6px; }
+
+/* names that have to share a row with something else */
+.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: block; }
+
+/* the barn table reads down a column of names, so it is ranged left */
+.tbl td.name-cell, .tbl th.name-cell { text-align: left; }
+.tbl td.name-cell .row, .tbl td.name-cell .grow { justify-content: flex-start; }
+
+/* the silks scale with the box like everything else in it — the component's
+   inline size is only the fallback for anywhere without container queries */
+.fob-box-silks { display: flex; margin-left: auto; }
+.fob-box-silks .silks,
+.fob-box-silks .silks-none {
+  width: clamp(15px, 9cqi, 32px) !important;
+  height: auto !important;
+  aspect-ratio: 3 / 4;
 }

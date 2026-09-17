@@ -164,17 +164,19 @@ export default function Rides() {
                     onClick={() => held && place(p.id, held.id)}
                   >
                     <div className="rc-hd">
-                      <span className="rc-nm">{p.name}</span>
+                      <span className="rc-nm ellip">{p.name}</span>
                       <span className="rc-lots nums" title={`${all} rides this morning`}>
                         {all}
                       </span>
                     </div>
                     {animal ? (
                       <div className="rc-horse">
-                        <Silks animal={animal} size={26} />
+                        <span className="silks-cell">
+                          <Silks animal={animal} size={28} />
+                        </span>
                         <div className="grow" style={{ minWidth: 0 }}>
-                          <b>{animal.name}</b>
-                          <div className="tiny mute">{boxOf(world, animal)}</div>
+                          <b className="ellip">{animal.name}</b>
+                          <div className="tiny mute ellip">{boxOf(world, animal)}</div>
                         </div>
                         <button
                           className="icon-btn sm"
@@ -239,9 +241,12 @@ export default function Rides() {
                 onClick={() => setHeld(held?.id === a.id ? null : a)}
               >
                 <Coat animal={a} size={26} />
+                <span className="silks-cell">
+                  <Silks animal={a} size={26} />
+                </span>
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <b>{a.name}</b>
-                  <div className="tiny mute">{boxOf(world, a)}</div>
+                  <b className="ellip">{a.name}</b>
+                  <div className="tiny mute ellip">{boxOf(world, a)}</div>
                 </div>
                 <Icon name="right" size={14} style={{ color: "#86a0b8" }} />
               </button>

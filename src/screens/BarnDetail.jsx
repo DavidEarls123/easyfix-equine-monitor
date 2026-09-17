@@ -13,6 +13,7 @@ import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import FrontOfBarn from "../components/FrontOfBarn";
+import Silks from "../components/Silks";
 import { go } from "../lib/router";
 import { barnAlerts } from "../lib/insights";
 import { CELL } from "../lib/world";
@@ -154,8 +155,9 @@ function Overview({ roll, alerts, now, snap, onAssign, onRename }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Stall</th>
-                  <th>Horse</th>
+                  <th className="name-cell">Stall</th>
+                  <th className="col-silks">Colours</th>
+                  <th className="name-cell">Horse</th>
                   <th>Intake</th>
                   <th>Pace</th>
                   <th>Temp</th>
@@ -226,10 +228,11 @@ function Row({ x, s, now, onAssign, onRename }) {
   if (!animal)
     return (
       <tr>
-        <td>
+        <td className="name-cell">
           <StallName stall={stall} onRename={onRename} />
         </td>
-        <td className="mute" colSpan={5}>
+        <td className="col-silks" />
+        <td className="mute name-cell" colSpan={5}>
           Empty box
         </td>
         <td>
@@ -251,13 +254,18 @@ function Row({ x, s, now, onAssign, onRename }) {
 
   return (
     <tr>
-      <td>
+      <td className="name-cell">
         <StallName stall={stall} onRename={onRename} />
       </td>
-      <td>
-        <div className="row" style={{ gap: 9, justifyContent: "center" }}>
+      <td className="col-silks">
+        <span className="silks-cell">
+          <Silks animal={animal} size={28} />
+        </span>
+      </td>
+      <td className="name-cell">
+        <div className="row" style={{ gap: 9 }}>
           <Coat animal={animal} size={26} />
-          <button className="lnk" onClick={() => go(`animal/${animal.id}`)}>
+          <button className="lnk ellip" onClick={() => go(`animal/${animal.id}`)}>
             {animal.name}
           </button>
         </div>
@@ -513,8 +521,8 @@ function Assign({ stall, onClose }) {
 /* A box is not always "Stall 4" — plenty of yards name them. */
 function StallName({ stall, onRename }) {
   return (
-    <div className="row" style={{ gap: 6, justifyContent: "center" }}>
-      <b>{stall.name}</b>
+    <div className="row" style={{ gap: 6 }}>
+      <b className="ellip">{stall.name}</b>
       {onRename && (
         <button
           className="icon-btn sm rename"

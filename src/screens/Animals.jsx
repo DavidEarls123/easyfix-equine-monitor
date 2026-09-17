@@ -6,6 +6,7 @@ import { Card, Coat, Empty, Field, Modal, Pill, Tabs } from "../components/ui";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
+import Silks from "../components/Silks";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 
@@ -82,6 +83,7 @@ export default function Animals({ snap }) {
                   <th>Age</th>
                   <th>Sex</th>
                   <th>Stall</th>
+                  <th className="col-silks">Colours</th>
                   <th>Water</th>
                   <th>Temp</th>
                   <th>Air</th>
@@ -111,6 +113,11 @@ export default function Animals({ snap }) {
                         ) : (
                           <Pill tone="flat">Unassigned</Pill>
                         )}
+                      </td>
+                      <td className="col-silks">
+                        <span className="silks-cell">
+                          <Silks animal={animal} size={28} />
+                        </span>
                       </td>
                       <td className="nums">
                         {t ? (
