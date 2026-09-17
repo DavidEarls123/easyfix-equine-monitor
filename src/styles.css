@@ -671,20 +671,24 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .fos-metric.critical { color: #ff9c9c; }
 
 .fos-main { display: flex; flex-direction: column; padding: 14px 18px 12px; min-width: 0; }
-.fos-head { display: flex; align-items: flex-start; gap: 18px; }
+.fos-head { display: flex; align-items: flex-start; gap: 22px; flex: none; }
 .fos-id { min-width: 0; flex: 1; }
 .fos-id h2 {
-  font-size: 38px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.02;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.32);
+  font-size: 58px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.32);
 }
-.fos-sub { display: flex; gap: 24px; margin-top: 7px; font-size: 15px; color: #dbe7ff; flex-wrap: wrap; }
-.fos-sub b { font-weight: 800; color: #fff; margin-right: 6px; }
-.fos-owner { display: flex; align-items: center; gap: 14px; flex: none; }
+.fos-sub { display: flex; gap: 34px; margin-top: 12px; font-size: 23px; color: #dbe7ff; flex-wrap: wrap; }
+.fos-sub b { font-weight: 800; color: #fff; margin-right: 8px; }
+.fos-owner { display: flex; align-items: center; gap: 16px; flex: none; }
 .fos-clock { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; color: #cfe0ff; }
 
-.fos-facts { margin: 16px 0 0; display: grid; gap: 6px; font-size: 16px; }
-.fos-facts div { display: flex; gap: 10px; min-width: 0; align-items: baseline; }
-.fos-facts dt { font-weight: 800; color: #fff; flex: none; min-width: 62px; }
+/* the breeding block fills what is left between the name and the foot */
+.fos-facts {
+  margin: 0; padding: 22px 0 8px; display: grid; gap: 12px; font-size: 26px;
+  flex: 1; align-content: center;
+}
+.fos-facts div { display: flex; gap: 14px; min-width: 0; align-items: baseline; }
+.fos-facts dt { font-weight: 800; color: #fff; flex: none; min-width: 108px; }
 .fos-facts dd { margin: 0; color: #dbe7ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .fos-foot {
@@ -744,10 +748,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* the panel scales down with its container rather than reflowing */
 @container (max-width: 700px) {
   .fos-screen { grid-template-columns: 92px minmax(0, 1fr); }
-  .fos-id h2 { font-size: 26px; }
+  .fos-id h2 { font-size: 34px; }
+  .fos-sub { font-size: 15px; gap: 20px; margin-top: 7px; }
+  .fos-facts { font-size: 16px; gap: 7px; padding: 12px 0 6px; }
+  .fos-facts dt { min-width: 68px; }
   .fos-logo { width: 76px; }
-  .fos-facts { font-size: 13px; }
-  .fos-sub { font-size: 12.5px; gap: 16px; }
   .fos-note p { font-size: 12px; }
   .fos-task-ico, .fos-task .fos-ring { width: 46px; height: 46px; }
   .fos-task-count { font-size: 19px; }

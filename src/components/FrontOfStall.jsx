@@ -81,7 +81,7 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
               )}
             </div>
             <div className="fos-owner">
-              {animal && <Silks animal={animal} size={62} />}
+              {animal && <Silks animal={animal} size={118} />}
               <span className="fos-clock nums">{new Date(now).toLocaleTimeString([], { hour12: false })}</span>
             </div>
           </div>
