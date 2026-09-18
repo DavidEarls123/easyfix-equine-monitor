@@ -190,7 +190,9 @@ function Wall({ snap }) {
                       </span>
                     )}
                     <ScrollName className="nm">{x.animal ? x.animal.name : "Empty"}</ScrollName>
-                    <span className="st">{seg ? BEHAVIOUR[seg.state]?.label : "—"}</span>
+                    <span className="st" title={seg ? BEHAVIOUR[seg.state]?.label : undefined}>
+                      {seg ? BEHAVIOUR[seg.state]?.label : "—"}
+                    </span>
                   </div>
                 </div>
               );
