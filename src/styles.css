@@ -352,12 +352,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
    line up down the wall and a long horse name beside it cannot squeeze it.
    A stall named longer than that reads itself inside the same slot. */
 .cam .cap .scroller.strong { flex: 0 0 auto; width: 56px; }
-.cam .cap .nm { flex: 1 1 auto; min-width: 64px; }
+.cam .cap .nm { flex: 1 1 auto; min-width: 0; }
 .cam .cap .silks-cell { width: 22px; }
 .cam .cap .silks-cell .silks, .cam .cap .silks-cell .silks-none { width: 18px; height: 24px; }
 /* the horse's name outranks the behaviour label, so the label gives way first */
 .cam .cap .st {
-  margin-left: auto; font-size: 11px; color: #9ec0e0; flex: 0 20 auto; min-width: 0;
+  margin-left: auto; font-size: 11px; color: #9ec0e0; flex: 0 200 auto; min-width: 50px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cam.offline canvas { opacity: 0.5; }
