@@ -14,6 +14,7 @@ import { useWorld } from "../lib/store";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import FrontOfBarn from "../components/FrontOfBarn";
 import Silks from "../components/Silks";
+import ScrollName from "../components/ScrollName";
 import { go } from "../lib/router";
 import { barnAlerts } from "../lib/insights";
 import { CELL } from "../lib/world";
@@ -156,8 +157,8 @@ function Overview({ roll, alerts, now, snap, onAssign, onRename }) {
               <thead>
                 <tr>
                   <th className="name-cell">Stall</th>
-                  <th className="col-silks">Colours</th>
                   <th className="name-cell">Horse</th>
+                  <th className="col-silks">Colours</th>
                   <th>Intake</th>
                   <th>Pace</th>
                   <th>Temp</th>
@@ -231,8 +232,7 @@ function Row({ x, s, now, onAssign, onRename }) {
         <td className="name-cell">
           <StallName stall={stall} onRename={onRename} />
         </td>
-        <td className="col-silks" />
-        <td className="mute name-cell" colSpan={5}>
+        <td className="mute name-cell" colSpan={6}>
           Empty box
         </td>
         <td>
@@ -257,18 +257,18 @@ function Row({ x, s, now, onAssign, onRename }) {
       <td className="name-cell">
         <StallName stall={stall} onRename={onRename} />
       </td>
-      <td className="col-silks">
-        <span className="silks-cell">
-          <Silks animal={animal} size={28} />
-        </span>
-      </td>
       <td className="name-cell">
         <div className="row" style={{ gap: 9 }}>
           <Coat animal={animal} size={26} />
-          <button className="lnk ellip" onClick={() => go(`animal/${animal.id}`)}>
-            {animal.name}
+          <button className="lnk nm-slot" onClick={() => go(`animal/${animal.id}`)}>
+            <ScrollName>{animal.name}</ScrollName>
           </button>
         </div>
+      </td>
+      <td className="col-silks">
+        <span className="silks-cell">
+          <Silks animal={animal} size={38} />
+        </span>
       </td>
       <td className="nums">
         {t.offline ? (
@@ -522,7 +522,7 @@ function Assign({ stall, onClose }) {
 function StallName({ stall, onRename }) {
   return (
     <div className="row" style={{ gap: 6 }}>
-      <b className="ellip">{stall.name}</b>
+      <ScrollName className="nm-slot strong">{stall.name}</ScrollName>
       {onRename && (
         <button
           className="icon-btn sm rename"

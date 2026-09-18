@@ -14,6 +14,7 @@ import Icon from "./Icons";
 import CameraView from "./CameraView";
 import { Coat, Pill, SEVERITY, ago } from "./ui";
 import Silks from "./Silks";
+import ScrollName from "./ScrollName";
 import { WelfareRing } from "./Welfare";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
@@ -144,15 +145,14 @@ function Group({ g, now, live, onAction, onAck, expanded, onExpand }) {
             <span className="row" style={{ gap: 9 }}>
               {/* the colours the yard knows the horse by, beside its name */}
               <Silks animal={g.animal} size={34} />
-              <span className="nm">{g.animal.name}</span>
+              <ScrollName className="nm">{g.animal.name}</ScrollName>
               <Pill tone={tone}>
                 {g.issues.length} {g.issues.length === 1 ? "issue" : "issues"}
               </Pill>
             </span>
             <span className="attn-where">
               <Icon name="barn" size={13} />
-              {g.barn?.name}
-              {g.stall ? ` · ${g.stall.name}` : ""}
+              <ScrollName>{`${g.barn?.name ?? ""}${g.stall ? ` · ${g.stall.name}` : ""}`}</ScrollName>
             </span>
           </span>
           {g.welfare && (

@@ -17,6 +17,7 @@
 import { useState } from "react";
 import Icon from "./Icons";
 import Silks from "./Silks";
+import ScrollName from "./ScrollName";
 import { hhmm } from "./ui";
 import { useWorld } from "../lib/store";
 import { CARE, careToday, dueTimes } from "../lib/care";
@@ -62,7 +63,9 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
           {/* the horse, with the owner's colours and the clock opposite */}
           <div className="fos-head">
             <div className="fos-id">
-              <h2>{animal ? animal.name : "Empty box"}</h2>
+              <h2>
+                <ScrollName>{animal ? animal.name : "Empty box"}</ScrollName>
+              </h2>
               {animal && (
                 <div className="fos-sub">
                   <span>

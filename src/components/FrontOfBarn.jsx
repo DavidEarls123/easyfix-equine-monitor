@@ -14,6 +14,7 @@
 import { useState } from "react";
 import Icon from "./Icons";
 import Silks from "./Silks";
+import ScrollName from "./ScrollName";
 import FrontOfStall from "./FrontOfStall";
 import { careRollup, careToday } from "../lib/care";
 import { CELL } from "../lib/world";
@@ -81,7 +82,7 @@ export default function FrontOfBarn({ roll, now }) {
           if (!animal)
             return (
               <button key={stall.id} className="fob-box free" onClick={() => setOpen({ stall, st })}>
-                <span className="fob-box-nm">{stall.name}</span>
+                <ScrollName className="fob-box-nm">{stall.name}</ScrollName>
                 <span className="fob-box-free">Empty</span>
               </button>
             );
@@ -99,13 +100,13 @@ export default function FrontOfBarn({ roll, now }) {
           return (
             <button key={stall.id} className={`fob-box ${tone}`} onClick={() => setOpen({ stall, st })}>
               <span className="fob-box-hd">
-                <span className="fob-box-nm">{stall.name}</span>
+                <ScrollName className="fob-box-nm">{stall.name}</ScrollName>
                 <span className="fob-box-silks">
                   <Silks animal={animal} size={22} />
                 </span>
               </span>
               <span className="fob-box-body">
-                <span className="fob-box-an">{animal.name}</span>
+                <ScrollName className="fob-box-an">{animal.name}</ScrollName>
                 <span className="fob-box-stats nums">
                   <i>{t.offline ? "—" : `${t.intakeL}L`}</i>
                   <i>{t.tempNow != null ? `${t.tempNow}°` : "—"}</i>

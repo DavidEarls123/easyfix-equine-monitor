@@ -11,6 +11,7 @@ import { Card, Empty, Pill, Tabs, hhmm } from "../components/ui";
 import AlertList from "../components/AlertList";
 import CameraView from "../components/CameraView";
 import Silks from "../components/Silks";
+import ScrollName from "../components/ScrollName";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 import { stallAlerts, stallState } from "../lib/insights";
@@ -182,13 +183,13 @@ function Wall({ snap }) {
                     <span className="rec-dot" /> {x.barn.name}
                   </div>
                   <div className="cap">
-                    <b className="ellip">{x.stall.name}</b>
+                    <ScrollName className="strong">{x.stall.name}</ScrollName>
                     {x.animal && (
                       <span className="silks-cell">
                         <Silks animal={x.animal} size={26} />
                       </span>
                     )}
-                    <span className="ellip nm">{x.animal ? x.animal.name : "Empty"}</span>
+                    <ScrollName className="nm">{x.animal ? x.animal.name : "Empty"}</ScrollName>
                     <span className="st">{seg ? BEHAVIOUR[seg.state]?.label : "—"}</span>
                   </div>
                 </div>

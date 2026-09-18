@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import { Card, Coat, Empty, Field, Modal, Pill, Switch } from "../components/ui";
 import Silks from "../components/Silks";
+import ScrollName from "../components/ScrollName";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 import { availableRiders, groupOf, lotOfAnimal, morningMessage, planFor, planSummary, ridesOf } from "../lib/staff";
@@ -164,7 +165,7 @@ export default function Rides() {
                     onClick={() => held && place(p.id, held.id)}
                   >
                     <div className="rc-hd">
-                      <span className="rc-nm ellip">{p.name}</span>
+                      <ScrollName className="rc-nm">{p.name}</ScrollName>
                       <span className="rc-lots nums" title={`${all} rides this morning`}>
                         {all}
                       </span>
@@ -175,8 +176,8 @@ export default function Rides() {
                           <Silks animal={animal} size={28} />
                         </span>
                         <div className="grow" style={{ minWidth: 0 }}>
-                          <b className="ellip">{animal.name}</b>
-                          <div className="tiny mute ellip">{boxOf(world, animal)}</div>
+                          <ScrollName className="strong">{animal.name}</ScrollName>
+                          <ScrollName className="tiny mute">{boxOf(world, animal)}</ScrollName>
                         </div>
                         <button
                           className="icon-btn sm"
@@ -245,8 +246,8 @@ export default function Rides() {
                   <Silks animal={a} size={26} />
                 </span>
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <b className="ellip">{a.name}</b>
-                  <div className="tiny mute ellip">{boxOf(world, a)}</div>
+                  <ScrollName className="strong">{a.name}</ScrollName>
+                  <ScrollName className="tiny mute">{boxOf(world, a)}</ScrollName>
                 </div>
                 <Icon name="right" size={14} style={{ color: "#86a0b8" }} />
               </button>

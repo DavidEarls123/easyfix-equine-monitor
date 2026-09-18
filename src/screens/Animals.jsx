@@ -7,6 +7,7 @@ import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import Silks from "../components/Silks";
+import ScrollName from "../components/ScrollName";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 
@@ -79,11 +80,11 @@ export default function Animals({ snap }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th className="name-cell">Name</th>
+                  <th className="col-silks">Colours</th>
                   <th>Age</th>
                   <th>Sex</th>
                   <th>Stall</th>
-                  <th className="col-silks">Colours</th>
                   <th>Water</th>
                   <th>Temp</th>
                   <th>Air</th>
@@ -95,29 +96,29 @@ export default function Animals({ snap }) {
                   const barnName = stall ? world.barns.find((b) => b.id === stall.barnId)?.name : null;
                   return (
                     <tr key={animal.id}>
-                      <td>
+                      <td className="name-cell">
                         <div className="row" style={{ gap: 9 }}>
                           <Coat animal={animal} size={28} />
-                          <button className="lnk" onClick={() => go(`animal/${animal.id}`)}>
-                            {animal.name}
+                          <button className="lnk nm-slot" onClick={() => go(`animal/${animal.id}`)}>
+                            <ScrollName>{animal.name}</ScrollName>
                           </button>
                         </div>
+                      </td>
+                      <td className="col-silks">
+                        <span className="silks-cell">
+                          <Silks animal={animal} size={38} />
+                        </span>
                       </td>
                       <td className="nums">{ageOf(animal.foaled, now) ?? "—"}</td>
                       <td>{animal.sex}</td>
                       <td className="small">
                         {stall ? (
-                          <button className="lnk" onClick={() => go(`barn/${stall.barnId}`)}>
-                            {barnName} · {stall.name}
+                          <button className="lnk nm-slot" onClick={() => go(`barn/${stall.barnId}`)}>
+                            <ScrollName>{`${barnName} · ${stall.name}`}</ScrollName>
                           </button>
                         ) : (
                           <Pill tone="flat">Unassigned</Pill>
                         )}
-                      </td>
-                      <td className="col-silks">
-                        <span className="silks-cell">
-                          <Silks animal={animal} size={28} />
-                        </span>
                       </td>
                       <td className="nums">
                         {t ? (

@@ -7,6 +7,7 @@ import { Card, Coat, Pill, Tile, ago } from "../components/ui";
 import AttentionList from "../components/AttentionList";
 import { WelfareBar, WelfareRing } from "../components/Welfare";
 import Silks from "../components/Silks";
+import ScrollName from "../components/ScrollName";
 import { airStatus, tempStatus, waterStatus, worstTone } from "../lib/status";
 import { BarChart, C, LineChart, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
@@ -181,8 +182,8 @@ export default function Dashboard({ snap }) {
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="row" style={{ gap: 7 }}>
                     <Silks animal={x.animal} size={24} />
-                    <b>{x.animal.name}</b>
-                    <span className="tiny mute">{x.stall.name}</span>
+                    <ScrollName className="strong">{x.animal.name}</ScrollName>
+                    <ScrollName className="tiny mute">{x.stall.name}</ScrollName>
                   </div>
                   <div className="why">
                     {x.welfare.weakest ? `${x.welfare.weakest.label.toLowerCase()} — ${x.welfare.weakest.why}` : ""}
@@ -214,7 +215,7 @@ export default function Dashboard({ snap }) {
                   return (
                     <button key={r.barn.id} className={`barn-mini ${tone}`} onClick={() => go(`barn/${r.barn.id}`)}>
                       <div className="bm-hd">
-                        <b>{r.barn.name}</b>
+                        <ScrollName className="strong">{r.barn.name}</ScrollName>
                         <Pill tone={open ? r.worst?.severity || "warning" : "good"}>
                           {open ? `${open} open` : "All clear"}
                         </Pill>
@@ -319,8 +320,8 @@ export default function Dashboard({ snap }) {
               </span>
               <div className="grow">
                 <div className="row" style={{ gap: 8 }}>
-                  <b>{e.animal.name}</b>
-                  <span className="tiny mute">{e.stall.name}</span>
+                  <ScrollName className="strong">{e.animal.name}</ScrollName>
+                  <ScrollName className="tiny mute">{e.stall.name}</ScrollName>
                   <span className="when">{ago(e.at, now)}</span>
                 </div>
                 <div className="why">
@@ -348,12 +349,14 @@ function Outlier({ o, now }) {
       <td>
         <div className="row" style={{ gap: 9 }}>
           <Coat animal={o.animal} size={26} />
-          <button className="lnk" onClick={() => go(`animal/${o.animal.id}`)}>
-            {o.animal.name}
+          <button className="lnk nm-slot" onClick={() => go(`animal/${o.animal.id}`)}>
+            <ScrollName>{o.animal.name}</ScrollName>
           </button>
         </div>
       </td>
-      <td className="small mute">{o.stall.name}</td>
+      <td className="small mute">
+        <ScrollName className="nm-slot">{o.stall.name}</ScrollName>
+      </td>
       <td className="nums">{o.intakeL} L</td>
       <td className="nums mute">{o.avgL} L</td>
       <td className="nums" style={{ color: o.delta < 0 ? "#a92c2c" : "#0a7d0a", fontWeight: 700 }}>

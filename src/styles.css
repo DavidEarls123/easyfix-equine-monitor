@@ -203,7 +203,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* -------------------------------- tables ------------------------------- */
 
 .tbl-wrap { overflow-x: auto; padding-bottom: 4px; }
-.tbl { width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 620px; }
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 680px; }
 .tbl thead th {
   background: linear-gradient(180deg, #4a93e8, #2f7ad8); color: #fff; font-size: 11.5px;
   letter-spacing: 0.07em; text-transform: uppercase; font-weight: 700; padding: 12px 14px; text-align: center;
@@ -349,7 +349,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   display: flex; align-items: center; gap: 8px; padding: 7px 11px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px;
 }
 /* the stall name gets what it needs, the horse name takes the rest and clips */
-.cam .cap b { flex: 0 1 auto; max-width: 38%; }
+.cam .cap .scroller.strong { flex: 0 1 auto; max-width: 38%; }
 .cam .cap .nm { flex: 1 1 auto; }
 .cam .cap .silks-cell { width: 22px; }
 .cam .cap .silks-cell .silks, .cam .cap .silks-cell .silks-none { width: 18px; height: 24px; }
@@ -632,7 +632,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .barn-mini.serious { border-left-color: var(--serious); }
 .barn-mini.critical { border-left-color: var(--critical); }
 .bm-hd { display: flex; align-items: center; gap: 8px; }
-.bm-hd b { font-size: 13.5px; }
+.bm-hd .scroller.strong { font-size: 13.5px; }
 .bm-hd .pill { margin-left: auto; }
 .bm-occ { height: 4px; border-radius: 2px; background: #e6eef8; overflow: hidden; margin: 7px 0 6px; }
 .bm-occ > span { display: block; height: 100%; background: var(--blue-300); }
@@ -958,7 +958,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   background: var(--plane); border-radius: 20px; padding: 1px 7px;
 }
 .rc-horse { display: flex; align-items: center; gap: 8px; }
-.rc-horse b { font-size: 13px; display: block; }
+.rc-horse .scroller.strong { font-size: 13px; }
 .rc-slot {
   border: 1px dashed var(--line); border-radius: 8px; padding: 8px;
   font-size: 11.5px; color: var(--muted); text-align: center;
@@ -971,7 +971,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .pool-horse:hover { border-color: var(--blue-300); background: #fbfdff; }
 .pool-horse.held { border-color: var(--blue); background: var(--blue-50); }
-.pool-horse b { font-size: 13px; display: block; }
+.pool-horse .scroller.strong { font-size: 13px; }
 
 .msg-preview { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 .msg-preview pre {
@@ -1099,10 +1099,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
    out of line or make a camera caption two lines tall. */
 .silks-cell { display: flex; align-items: center; justify-content: center; width: 30px; flex: none; }
 .silks-cell .silks, .silks-cell .silks-none { width: 22px; height: 29px; }
-.tbl td.col-silks, .tbl th.col-silks { width: 54px; padding-left: 6px; padding-right: 6px; }
-
-/* names that have to share a row with something else */
-.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: block; }
+.tbl td.col-silks, .tbl th.col-silks { width: 64px; padding-left: 6px; padding-right: 6px; }
+.tbl .col-silks .silks-cell { width: 40px; }
 
 /* the barn table reads down a column of names, so it is ranged left */
 .tbl td.name-cell, .tbl th.name-cell { text-align: left; }
@@ -1113,7 +1111,39 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .fob-box-silks { display: flex; margin-left: auto; }
 .fob-box-silks .silks,
 .fob-box-silks .silks-none {
-  width: clamp(15px, 9cqi, 32px) !important;
+  width: clamp(20px, 20cqi, 58px) !important;
   height: auto !important;
   aspect-ratio: 3 / 4;
+}
+
+/* --------------------------- names that read themselves -------------------- */
+
+.scroller { display: block; overflow: hidden; white-space: nowrap; min-width: 0; max-width: 100%; }
+.scroller > span { display: inline-block; white-space: nowrap; }
+/* nothing moves until the text is actually wider than its slot */
+.scroller.on > span { animation: scroll-read var(--t, 8s) linear infinite; }
+
+@keyframes scroll-read {
+  0%, 14% { transform: translateX(0); }
+  46%, 60% { transform: translateX(calc(-1 * var(--d))); }
+  92%, 100% { transform: translateX(0); }
+}
+
+/* a name in a table row gets a slot it may not grow past — otherwise the
+   column simply widens and the name never has to read itself */
+.nm-slot { flex: 1 1 auto; min-width: 0; max-width: 200px; }
+.tbl .lnk.nm-slot { display: block; text-align: left; }
+/* the swatch and the name stay on one line — the name reads itself instead */
+.tbl td.name-cell .row { flex-wrap: nowrap; }
+.scroller.strong { font-weight: 800; }
+
+/* a row being read should hold still while it is being pointed at */
+.tbl tr:hover .scroller.on > span,
+.pool-horse:hover .scroller.on > span,
+.rider-card:hover .scroller.on > span,
+.cam:hover .scroller.on > span { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroller.on > span { animation: none; }
+  .scroller.on { text-overflow: ellipsis; }
 }

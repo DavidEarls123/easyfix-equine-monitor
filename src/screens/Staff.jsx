@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
+import ScrollName from "../components/ScrollName";
 import { Card, Empty, Field, Modal, Pill, Switch, Tabs, ago } from "../components/ui";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
@@ -111,8 +112,8 @@ export default function Staff() {
                   {shown.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        <button className="lnk" onClick={() => setEditing(p)}>
-                          {p.name}
+                        <button className="lnk nm-slot" onClick={() => setEditing(p)}>
+                          <ScrollName>{p.name}</ScrollName>
                         </button>
                       </td>
                       <td>
@@ -269,7 +270,7 @@ function StaffModal({ person, onClose }) {
               return (
                 <div className="row" key={r.id} style={{ gap: 8, padding: "3px 0" }}>
                   <Pill tone="flat">{r.lot.time}</Pill>
-                  <b style={{ fontSize: 13 }}>{a ? a.name : "TBC"}</b>
+                  <ScrollName className="strong" style={{ fontSize: 13 }}>{a ? a.name : "TBC"}</ScrollName>
                   <span className="tiny mute">{r.lot.label}</span>
                 </div>
               );

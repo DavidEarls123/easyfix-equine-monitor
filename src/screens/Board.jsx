@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import Silks from "../components/Silks";
+import ScrollName from "../components/ScrollName";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 import { availableRiders, planFor, ridesOf } from "../lib/staff";
@@ -106,8 +107,8 @@ export default function Board() {
                 <div className="bd-row" key={ride.id}>
                   <Silks animal={animal} size={40} />
                   <div className="bd-pair">
-                    <span className="bd-rider">{rider?.name || "Unmanned"}</span>
-                    <span className="bd-horse">{animal?.name || "TBC"}</span>
+                    <ScrollName className="bd-rider">{rider?.name || "Unmanned"}</ScrollName>
+                    <ScrollName className="bd-horse">{animal?.name || "TBC"}</ScrollName>
                   </div>
                   <span className="bd-box nums">{animal ? boxLabel(world, animal) : ""}</span>
                 </div>
