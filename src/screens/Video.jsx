@@ -178,23 +178,27 @@ function Wall({ snap }) {
               const seg = x.animal ? behaviourAt(x.stall, x.animal, now) : null;
               return (
                 <div key={x.stall.id} className={`cam ${x.stall.camera === false ? "offline" : ""}`} onClick={() => go(`video/${x.stall.id}`)}>
-                  <CameraView stall={x.stall} animal={x.animal} at={now} fps={6} />
-                  <div className="cam-badge">
-                    <span className="rec-dot" /> {x.barn.name}
+                  {/* the overlays sit on the picture, so they are placed against the
+                      picture rather than against the card and its caption */}
+                  <div className="cam-pic">
+                    <CameraView stall={x.stall} animal={x.animal} at={now} fps={6} />
+                    <div className="cam-badge">
+                      <span className="rec-dot" /> {x.barn.name}
+                    </div>
+                    {seg && (
+                      <div className={`cam-state ${BEHAVIOUR[seg.state]?.tone || "flat"}`}>
+                        {BEHAVIOUR[seg.state]?.label}
+                      </div>
+                    )}
                   </div>
                   <div className="cap">
-                    {/* the box, the colours and the name on one line — what the horse
-                        is doing reads underneath, where it has the width to say it */}
-                    <div className="cap-main">
-                      <ScrollName className="strong">{x.stall.name}</ScrollName>
-                      {x.animal && (
-                        <span className="silks-cell">
-                          <Silks animal={x.animal} size={26} />
-                        </span>
-                      )}
-                      <ScrollName className="nm">{x.animal ? x.animal.name : "Empty"}</ScrollName>
-                    </div>
-                    <div className="st">{seg ? BEHAVIOUR[seg.state]?.label : "—"}</div>
+                    <ScrollName className="strong">{x.stall.name}</ScrollName>
+                    {x.animal && (
+                      <span className="silks-cell">
+                        <Silks animal={x.animal} size={26} />
+                      </span>
+                    )}
+                    <ScrollName className="nm">{x.animal ? x.animal.name : "Empty"}</ScrollName>
                   </div>
                 </div>
               );

@@ -345,8 +345,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   position: relative; cursor: pointer; box-shadow: var(--shadow);
 }
 .cam canvas { display: block; width: 100%; height: auto; }
-.cam .cap { display: grid; gap: 1px; padding: 7px 11px 8px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px; }
-.cam .cap-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cam .cap {
+  display: flex; align-items: center; gap: 8px; padding: 7px 11px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px;
+}
 /* The stall keeps a fixed slot, wide enough for "Stall 99", so the captions
    line up down the wall and a long horse name beside it cannot squeeze it.
    A stall named longer than that reads itself inside the same slot. */
@@ -354,14 +355,27 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .cam .cap .nm { flex: 1 1 auto; min-width: 0; }
 .cam .cap .silks-cell { width: 22px; }
 .cam .cap .silks-cell .silks, .cam .cap .silks-cell .silks-none { width: 18px; height: 24px; }
-/* what the horse is doing gets its own line, so it never competes with the name */
-.cam .cap .st {
-  font-size: 11px; color: #9ec0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.cam-pic { position: relative; display: block; }
 .cam.offline canvas { opacity: 0.5; }
+.cam-badge, .cam-state {
+  position: absolute; top: 9%; background: rgba(6, 18, 31, 0.72); border-radius: 6px;
+  padding: 2px 7px; font-size: 11px; border: 1px solid rgba(255, 255, 255, 0.11);
+}
 .cam-badge {
-  position: absolute; top: 8px; left: 8px; background: rgba(6, 18, 31, 0.72); color: #fff;
-  border-radius: 6px; padding: 2px 7px; font-size: 11px; display: flex; align-items: center; gap: 6px;
+  left: 8px; color: #fff; display: flex; align-items: center; gap: 6px;
+  max-width: 32%; white-space: nowrap; overflow: hidden;
+}
+/* what the horse is doing, opposite the barn and clear of the camera's own
+   REC line, tinted so a worrying read shows up from across the wall */
+.cam-state {
+  right: 8px; max-width: 64%; color: #cfe2f5; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cam-state.good { color: #93e6a3; }
+.cam-state.warning { color: #ffd77e; border-color: rgba(255, 200, 90, 0.45); }
+.cam-state.serious { color: #ffb086; border-color: rgba(255, 150, 100, 0.5); }
+.cam-state.critical {
+  color: #fff; background: rgba(150, 26, 26, 0.85); border-color: rgba(255, 130, 130, 0.6);
 }
 .rec-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; animation: blink 1.6s infinite; }
 @keyframes blink { 0%, 60% { opacity: 1; } 80%, 100% { opacity: 0.2; } }
