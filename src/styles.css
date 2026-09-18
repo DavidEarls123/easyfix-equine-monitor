@@ -345,9 +345,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   position: relative; cursor: pointer; box-shadow: var(--shadow);
 }
 .cam canvas { display: block; width: 100%; height: auto; }
-.cam .cap {
-  display: flex; align-items: center; gap: 8px; padding: 7px 11px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px;
-}
+.cam .cap { display: grid; gap: 1px; padding: 7px 11px 8px; background: #0a1c2e; color: #dbe9f7; font-size: 12.5px; }
+.cam .cap-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
 /* The stall keeps a fixed slot, wide enough for "Stall 99", so the captions
    line up down the wall and a long horse name beside it cannot squeeze it.
    A stall named longer than that reads itself inside the same slot. */
@@ -355,10 +354,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .cam .cap .nm { flex: 1 1 auto; min-width: 0; }
 .cam .cap .silks-cell { width: 22px; }
 .cam .cap .silks-cell .silks, .cam .cap .silks-cell .silks-none { width: 18px; height: 24px; }
-/* the horse's name outranks the behaviour label, so the label gives way first */
+/* what the horse is doing gets its own line, so it never competes with the name */
 .cam .cap .st {
-  margin-left: auto; font-size: 11px; color: #9ec0e0; flex: 0 200 auto; min-width: 50px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 11px; color: #9ec0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cam.offline canvas { opacity: 0.5; }
 .cam-badge {
@@ -1153,3 +1151,23 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   .scroller.on > span { animation: none; }
   .scroller.on { text-overflow: ellipsis; }
 }
+
+/* --------------------------- through to the horse -------------------------- */
+
+/* On a stall's camera the horse is the reason you are there, so the way to its
+   profile is a button you can see, not a line of underlined text. */
+.profile-btn {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 8px;
+  padding: 6px 12px 6px 8px; border: 1px solid var(--blue-100); border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, var(--blue-50));
+  box-shadow: var(--shadow); cursor: pointer; text-align: left; max-width: 100%;
+}
+.profile-btn:hover { border-color: var(--blue-300); background: var(--blue-50); }
+.profile-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.profile-btn .pb-txt { display: grid; min-width: 0; }
+.profile-btn .pb-nm {
+  font-size: 15px; font-weight: 800; letter-spacing: -0.015em; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.profile-btn .pb-go { font-size: 11.5px; font-weight: 700; color: var(--blue-600); }
+.profile-btn svg { color: var(--blue-600); flex: none; }

@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../components/Icons";
-import { Card, Empty, Pill, Tabs, hhmm } from "../components/ui";
+import { Card, Coat, Empty, Pill, Tabs, hhmm } from "../components/ui";
 import AlertList from "../components/AlertList";
 import CameraView from "../components/CameraView";
 import Silks from "../components/Silks";
@@ -183,16 +183,18 @@ function Wall({ snap }) {
                     <span className="rec-dot" /> {x.barn.name}
                   </div>
                   <div className="cap">
-                    <ScrollName className="strong">{x.stall.name}</ScrollName>
-                    {x.animal && (
-                      <span className="silks-cell">
-                        <Silks animal={x.animal} size={26} />
-                      </span>
-                    )}
-                    <ScrollName className="nm">{x.animal ? x.animal.name : "Empty"}</ScrollName>
-                    <span className="st" title={seg ? BEHAVIOUR[seg.state]?.label : undefined}>
-                      {seg ? BEHAVIOUR[seg.state]?.label : "—"}
-                    </span>
+                    {/* the box, the colours and the name on one line — what the horse
+                        is doing reads underneath, where it has the width to say it */}
+                    <div className="cap-main">
+                      <ScrollName className="strong">{x.stall.name}</ScrollName>
+                      {x.animal && (
+                        <span className="silks-cell">
+                          <Silks animal={x.animal} size={26} />
+                        </span>
+                      )}
+                      <ScrollName className="nm">{x.animal ? x.animal.name : "Empty"}</ScrollName>
+                    </div>
+                    <div className="st">{seg ? BEHAVIOUR[seg.state]?.label : "—"}</div>
                   </div>
                 </div>
               );
@@ -266,15 +268,19 @@ function Single({ stall }) {
           <h1>
             {stall.name} <span className="mute" style={{ fontWeight: 500, fontSize: 17 }}>· {barn?.name}</span>
           </h1>
-          <div className="sub">
-            {animal ? (
-              <button className="lnk" onClick={() => go(`animal/${animal.id}`)}>
-                {animal.name}
-              </button>
-            ) : (
-              "No horse assigned"
-            )}
-          </div>
+          {animal ? (
+            <button className="profile-btn" onClick={() => go(`animal/${animal.id}`)}>
+              <Coat animal={animal} size={28} />
+              <Silks animal={animal} size={28} />
+              <span className="pb-txt">
+                <span className="pb-nm">{animal.name}</span>
+                <span className="pb-go">Open the horse's profile</span>
+              </span>
+              <Icon name="right" size={15} />
+            </button>
+          ) : (
+            <div className="sub">No horse assigned</div>
+          )}
         </div>
         <div className="hd-actions">
           <button className="btn" onClick={() => go("video")}>
