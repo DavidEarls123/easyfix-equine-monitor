@@ -42,6 +42,16 @@ const P = {
     "M9.2 10.6h.02",
   /* a box waiting for a horse */
   nobox: "M4 8h16v12H4V8Zm3-4h10M12 12v5M9.5 14.5h5",
+  /* people, time and files — used all over, and until now quietly falling
+     back to the dashboard glyph because they were never drawn */
+  id: "M3 5h18v14H3V5Zm6 5.5a2 2 0 1 0 4 0 2 2 0 0 0-4 0ZM7.4 16c.7-1.5 2-2.4 3.6-2.4s2.9.9 3.6 2.4M16.5 9.5H19M16.5 13H19",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13.5V12l3.4 2",
+  download: "M12 4v10m0 0 4-4.2M12 14l-4-4.2M4 18.5h16",
+  /* the work a yard does: a clipboard, a horseshoe, a vet's bag, a label */
+  job: "M9 5H6v15h12V5h-3M9 5a3 3 0 0 1 6 0M8.5 11h7M8.5 15h4.5",
+  hoof: "M5.4 20.3C4.2 18 3.6 15.5 3.6 12.9 3.6 7.9 7.3 4 12 4s8.4 3.9 8.4 8.9c0 2.6-.6 5.1-1.8 7.4M4.6 20.4h2.6M16.8 20.4h2.6M7 15.6h1.8M15.2 15.6H17",
+  vet: "M4 8.5h16V20H4V8.5Zm5 0V5.5h6v3M12 11.5v5m-2.5-2.5h5",
+  tag: "M4 4h7.2L20 12.8 12.8 20 4 11.2V4Zm3.6 3.6h.02",
 };
 
 /* a few icons are silhouettes rather than line work, because that is what they

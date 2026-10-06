@@ -13,7 +13,7 @@ import Silks, { SILKS_LIST, silksForOwner } from "../components/Silks";
 import { COLOURS, colourOf } from "../lib/colours";
 import { ageOf } from "../lib/registry";
 import { DEFAULT_PASSPORT, searchPassports, sourceLabel } from "../lib/passport";
-import { animalFromRecord } from "../lib/world";
+import { animalFromRecord, stallsOfYard } from "../lib/world";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 
@@ -89,7 +89,8 @@ export default function AddAnimal({ onClose, presetStallId }) {
 
   const taken = new Set(world.animals.map((a) => a.name.toLowerCase()));
 
-  const free = world.stalls
+  // only boxes in the yard that is open — a horse cannot be put in another yard
+  const free = stallsOfYard(world)
     .filter((s) => !s.animalId)
     .map((s) => ({ ...s, barn: world.barns.find((b) => b.id === s.barnId) }))
     .filter((s) => s.barn?.configured)

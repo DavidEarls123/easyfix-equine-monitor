@@ -12,10 +12,10 @@ import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
 import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
-import { DEFAULT_LOTS } from "./staff";
+import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
 import { silksForOwner } from "../components/Silks";
 
-export const VERSION = 10;
+export const VERSION = 11;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -49,8 +49,9 @@ export const DEFAULT_SETTINGS = {
   baseline: { ...DEFAULT_BASELINE },
   // default rounds per day; a horse can override its own
   care: { ...DEFAULT_CARE },
-  // the lots the string goes out in; a yard sets its own
-  lots: DEFAULT_LOTS.map((l) => ({ ...l })),
+  // what a horse can be down for on top of its lot, named by the operator and
+  // shared across every yard they run
+  activities: DEFAULT_ACTIVITIES.map((a) => ({ ...a })),
   // the hour a published morning goes out, if it is not sent there and then
   ridesSendAt: "05:30",
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
@@ -93,6 +94,40 @@ export function stallsOf(world, barnId) {
 }
 export function barnsOf(world, yardId) {
   return world.barns.filter((b) => b.yardId === yardId);
+}
+
+/* ------------------------------ one yard of many --------------------------- */
+
+/* An operator is a trainer, and a trainer may run more than one yard: a main
+   yard and a satellite up the road, each with its own barns, boxes, gallops and
+   morning. Everything below answers "of the yard we are looking at". */
+
+/** The yard the app is currently showing. */
+export const currentYard = (world) =>
+  (world.yards || []).find((y) => y.id === world.yardId) || (world.yards || [])[0] || null;
+
+export const yardById = (world, yardId) => (world.yards || []).find((y) => y.id === yardId) || null;
+
+export const barnsOfYard = (world, yardId = currentYard(world)?.id) =>
+  world.barns.filter((b) => b.yardId === yardId);
+
+export function stallsOfYard(world, yardId = currentYard(world)?.id) {
+  const mine = new Set(barnsOfYard(world, yardId).map((b) => b.id));
+  return world.stalls.filter((s) => mine.has(s.barnId));
+}
+
+/** Horses are held against a yard directly, so one standing in no box still
+    belongs somewhere. Anything seeded before yards were separable counts as
+    the first yard rather than disappearing. */
+export function animalsOfYard(world, yardId = currentYard(world)?.id) {
+  const first = (world.yards || [])[0]?.id;
+  return world.animals.filter((a) => (a.yardId || first) === yardId);
+}
+
+/** Which yard a barn, box or horse sits in. */
+export function yardOfBarn(world, barnId) {
+  const barn = world.barns.find((b) => b.id === barnId);
+  return barn ? yardById(world, barn.yardId) : null;
 }
 export function animalOf(world, animalId) {
   return world.animals.find((a) => a.id === animalId) || null;
@@ -175,6 +210,7 @@ export function animalFromRecord(rec, extra = {}) {
     ueln: rec.ueln,
     height: rec.height,
     source: rec.source,
+    yardId: null,
     goalL: 35,
     scenario: "normal",
     groom: rec.groom || "",
@@ -202,12 +238,44 @@ const BARN1 = [
   ["Irish Point", "lameness"],
 ];
 
-/** The yard the app opens on: three fitted-out barns and six shells to configure. */
+/** A yard as the operator sets one up: a name, the lots it runs and the ground
+    it works on. Every yard carries its own, because they are different places. */
+export function makeYard(name, id = uid("yd_")) {
+  return {
+    id,
+    name,
+    lots: DEFAULT_LOTS.map((l, i) => ({ id: `lot${i + 1}`, ...l, gallopId: null })),
+    gallops: DEFAULT_GALLOPS.map((g) => ({ ...g })),
+  };
+}
+
+/**
+ * The demo operator: a main yard of three fitted-out barns and six shells, and
+ * a satellite up the road. Two yards rather than one because a trainer with a
+ * second yard is the normal case, and a product that assumes one hides it.
+ */
 export function seedWorld() {
+  const main = makeYard("Rathmore Lodge", "yard1");
+  main.lots[0].gallopId = "gl_round";
+  main.lots[1].gallopId = "gl_straight";
+  main.lots[2].gallopId = "gl_hill";
+  main.lots[3].gallopId = "gl_canter";
+
+  const hill = makeYard("Hillside Yard", "yard2");
+  hill.gallops = [
+    { id: "gl_top", label: "Top Of The Hill", surface: "Grass", furlongs: 6 },
+    { id: "gl_lower", label: "Lower Canter", surface: "Woodchip", furlongs: 5 },
+    { id: "gl_sandring", label: "Sand Ring", surface: "Sand", furlongs: 2 },
+  ];
+  hill.lots = hill.lots.slice(0, 2);
+  hill.lots[0].gallopId = "gl_top";
+  hill.lots[1].gallopId = "gl_lower";
+
   const world = {
     version: VERSION,
     settings: { ...DEFAULT_SETTINGS },
-    yards: [{ id: "yard1", name: "Yard 1" }],
+    yards: [main, hill],
+    yardId: main.id,
     barns: [],
     stalls: [],
     animals: [],
@@ -220,10 +288,10 @@ export function seedWorld() {
     log: [],
   };
 
-  const addBarn = (name, stallCount, configured = true) => {
+  const addBarn = (name, stallCount, configured = true, yardId = main.id) => {
     const id = uid("bn_");
     const layout = configured ? makeLayout(stallCount) : { cols: 0, rows: 0, cells: [] };
-    const barn = { id, yardId: "yard1", name, configured, ...layout, waterTankPct: 0, feedDays: 0, beddingDays: 0 };
+    const barn = { id, yardId, name, configured, ...layout, waterTankPct: 0, feedDays: 0, beddingDays: 0 };
     world.barns.push(barn);
     if (configured) {
       const synced = syncStalls(world, barn);
@@ -245,7 +313,12 @@ export function seedWorld() {
   BARN1.forEach(([name, scenario], i) => {
     const rec = byName(name);
     if (!rec || !s1[i]) return;
-    const animal = animalFromRecord(rec, { scenario, goalL: 32 + Math.round(noise(`g|${name}`) * 8), joined: joinedLongAgo(name) });
+    const animal = animalFromRecord(rec, {
+      scenario,
+      yardId: main.id,
+      goalL: 32 + Math.round(noise(`g|${name}`) * 8),
+      joined: joinedLongAgo(name),
+    });
     world.animals.push(animal);
     s1[i].animalId = animal.id;
   });
@@ -259,36 +332,46 @@ export function seedWorld() {
     cash.seenAs = bright.id;
   }
 
-  // Barns 2 and 3 are filled from the registry, mostly settled.
+  // the rest of the boxes are filled from the registry, mostly settled
   const pool = REGISTRY.filter((r) => !BARN1.some(([nm]) => nm === r.name));
   let p = 0;
-  [
-    [b2, 10],
-    [b3, 17],
-  ].forEach(([barn, count]) => {
+  const fill = (barn, count, yardId) => {
     const stalls = stallsOf(world, barn.id).sort((a, b) => a.index - b.index);
     for (let i = 0; i < count && p < pool.length; i++, p++) {
       const rec = pool[p];
       const scenario = SCENARIO_POOL[Math.floor(noise(`sc|${rec.name}`) * SCENARIO_POOL.length)];
-      const animal = animalFromRecord(rec, { scenario, goalL: 30 + Math.round(noise(`g|${rec.name}`) * 12), joined: joinedLongAgo(rec.name) });
+      const animal = animalFromRecord(rec, {
+        scenario,
+        yardId,
+        goalL: 30 + Math.round(noise(`g|${rec.name}`) * 12),
+        joined: joinedLongAgo(rec.name),
+      });
       world.animals.push(animal);
       stalls[i].animalId = animal.id;
     }
-  });
+  };
+  fill(b2, 10, main.id);
+  fill(b3, 17, main.id);
 
-  return seedStaff(seedCare(world));
+  // the satellite: one barn working, one shed still to be laid out
+  const h1 = addBarn("Hillside Barn", 12, true, hill.id);
+  addBarn("Hillside Shed", 0, false, hill.id);
+  fill(h1, 9, hill.id);
+
+  return seedPlan(seedStaff(seedCare(world)));
 }
 
 /** Bulk yard for the scale demo: a customer running 300 monitored boxes. */
 export function bigYard(world, barnCount = 10, perBarn = 30) {
   const next = { ...world, barns: [...world.barns], stalls: [...world.stalls], animals: [...world.animals] };
-  const start = next.barns.length + 1;
+  const yardId = currentYard(next)?.id || next.yards[0]?.id;
+  const start = barnsOfYard(next, yardId).length + 1;
   for (let b = 0; b < barnCount; b++) {
     const id = uid("bn_");
     const layout = makeLayout(perBarn);
     const barn = {
       id,
-      yardId: "yard1",
+      yardId,
       name: `Barn ${start + b}`,
       configured: true,
       ...layout,
@@ -307,6 +390,7 @@ export function bigYard(world, barnCount = 10, perBarn = 30) {
       const animal = animalFromRecord(rec, {
         name: `${rec.name} ${String.fromCharCode(65 + (b % 26))}${i + 1}`,
         scenario,
+        yardId,
         goalL: 30 + Math.round(noise(`g|${st.id}`) * 12),
         joined: joinedLongAgo(st.id),
       });
@@ -377,6 +461,57 @@ function seedCare(world) {
       a.noteLog = [{ at: Date.now() - 3600000 * (2 + (i % 9)), text: notes[a.name], by: "Declan Murphy" }];
     }
   });
+  return world;
+}
+
+/* ------------------------------- the day's work ---------------------------- */
+
+/**
+ * A morning already half planned, so the planner opens on something rather than
+ * on an empty grid. Two lots out, a few horses doing more than cantering, and
+ * the work that is not ridden: two people on the boxes, the farrier, the vet.
+ */
+function seedPlan(world) {
+  const yard = world.yards[0];
+  const plan = emptyPlan(lotsOf(yard));
+  const riders = world.staff.filter((p) => (p.groups || []).includes("riders") && p.riding !== false);
+  const mine = world.animals.filter((a) => a.yardId === yard.id);
+  const hands = world.staff.filter((p) => (p.groups || []).includes("yard"));
+  const farrier = world.staff.find((p) => (p.groups || []).includes("farriers"));
+  const vet = world.staff.find((p) => (p.groups || []).includes("vets"));
+
+  // the usual pattern: a working lot and then a steadier one
+  const shape = [
+    { ride: 6, distance: 6, tags: ["ac_work"] },
+    { ride: 5, distance: 4, tags: ["ac_canter"] },
+  ];
+  let h = 0;
+  plan.lots.slice(0, shape.length).forEach((lot, li) => {
+    const { ride, distance, tags } = shape[li];
+    riders.slice(0, ride).forEach((p, i) => {
+      const animal = mine[h++];
+      if (!animal) return;
+      const extra = i === 1 ? ["ac_walker"] : i === 3 ? ["ac_swim"] : [];
+      lot.rides.push({
+        id: `rd_seed_${li}_${i}`,
+        riderId: p.id,
+        animalId: animal.id,
+        distanceF: distance + (i % 3 === 0 ? 1 : 0),
+        activities: [...tags, ...extra],
+        note: i === 0 && li === 0 ? "Upsides with the grey, don't go past him" : "",
+      });
+    });
+  });
+
+  const boxes = mine.slice(0, 18).map((a) => a.id);
+  plan.jobs = [
+    { id: "jb_seed_1", kind: "muckout", staffId: hands[0]?.id || null, at: "06:30", animalIds: boxes.slice(0, 9), note: "Barn 1 and the top of Barn 2" },
+    { id: "jb_seed_2", kind: "muckout", staffId: hands[1]?.id || null, at: "06:30", animalIds: boxes.slice(9, 18), note: "" },
+    { id: "jb_seed_3", kind: "farrier", staffId: farrier?.id || null, at: "10:00", animalIds: mine.slice(2, 5).map((a) => a.id), note: "Front shoes, bring the travelling box in" },
+    { id: "jb_seed_4", kind: "vet", staffId: vet?.id || null, at: "09:00", animalIds: mine.slice(2, 3).map((a) => a.id), note: "Scope before any hard feed" },
+  ];
+
+  world.ridePlan = { [planKey(yard.id, Date.now())]: plan };
   return world;
 }
 

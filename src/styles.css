@@ -1185,3 +1185,79 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .profile-btn .pb-go { font-size: 11.5px; font-weight: 700; color: var(--blue-600); }
 .profile-btn svg { color: var(--blue-600); flex: none; }
+
+/* ============================= the job planner ============================= */
+
+/* a lot tab also says which ground that lot is on, because that is half of
+   what a rider wants off the board */
+.lt-gallop { font-size: 11px; font-weight: 700; color: var(--blue-600); }
+.lot-tab.on .lt-gallop { color: rgba(255, 255, 255, 0.92); }
+.lot-tab.jobs { justify-content: center; align-items: flex-start; gap: 4px; margin-left: auto; }
+.lot-tab.jobs .lt-name { font-size: 13px; }
+
+/* what a horse is down for, under its name on the rider's card */
+.rc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 1px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  font-size: 10.5px; font-weight: 700; line-height: 1.5; color: #fff;
+  background: var(--ink-2); border-radius: 20px; padding: 1px 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tag.dist { background: var(--blue-600); letter-spacing: 0.01em; }
+.tag.note { background: var(--plane); color: var(--ink-2); border: 1px solid var(--line); font-weight: 600; }
+
+/* the work that is not ridden */
+.job-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 10px; }
+.job-card {
+  display: flex; flex-direction: column; gap: 7px; padding: 10px 11px 11px; background: #fff;
+  border: 1px solid var(--line); border-left: 4px solid var(--kind, var(--line)); border-radius: 11px;
+}
+.job-card.filled { background: #fbfdff; }
+.job-card.target { border-style: dashed; cursor: pointer; }
+.job-card.target:hover { background: var(--blue-50); }
+.jc-hd { display: flex; align-items: center; gap: 7px; }
+.jc-ico { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; flex: none; background: var(--plane); color: var(--kind, var(--ink-2)); }
+.jc-hd .sel { flex: 1; min-width: 0; }
+.sel.sm, .inp.sm { padding: 5px 8px; font-size: 12.5px; height: auto; }
+.jc-horses {
+  display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+  border: 1px dashed var(--line); border-radius: 9px; padding: 6px; min-height: 42px;
+}
+.jc-horse {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 150px;
+  background: var(--blue-50); border: 1px solid var(--blue-100); border-radius: 20px;
+  padding: 1px 3px 1px 5px; font-size: 12px; font-weight: 700;
+}
+.jc-horse .silks, .jc-horse .silks-none { width: 14px !important; height: 18px !important; }
+.jc-drop { font-size: 11.5px; color: var(--muted); }
+
+/* ============================ yards and their ground ====================== */
+
+.yard-pick { gap: 8px; }
+.yard-sel {
+  flex: 1; min-width: 0; appearance: none; background: none; border: 0; cursor: pointer;
+  color: inherit; font: inherit; font-weight: 700; padding: 0;
+}
+.yard-sel option { color: var(--ink); }
+
+.yard-row, .lot-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px; background: #fff;
+}
+.yard-row.on { border-color: var(--blue-100); background: var(--blue-50); }
+/* a field keeps a readable width and the row wraps instead of squeezing it */
+.yard-row .inp, .lot-row .inp, .lot-row .sel { flex: 1 1 130px; min-width: 0; }
+.lot-row .inp.time { flex: 0 0 104px; }
+.lot-row .inp.num { flex: 0 0 74px; }
+.lot-row .icon-btn { flex: none; margin-left: auto; }
+.yard-row .icon-btn { flex: none; }
+.swatch {
+  width: 30px; height: 30px; flex: none; padding: 0; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 8px; background: none;
+}
+
+/* ============================== on the board ============================== */
+
+.bd-gallop { font-size: 20px; font-weight: 700; color: #8ed0ff; letter-spacing: -0.01em; }
+.bd-work { font-size: 13px; font-weight: 700; color: #cfe2f5; white-space: nowrap; }
+.bd-job-ico { display: grid; place-items: center; width: 40px; flex: none; }

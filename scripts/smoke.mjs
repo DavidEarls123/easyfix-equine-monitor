@@ -61,24 +61,54 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 const failures = [];
-for (const route of ROUTES) {
-  const errors = [];
-  const onError = (e) => errors.push(String(e.message || e).split("\n")[0]);
-  const onConsole = (m) => m.type() === "error" && !/404|favicon/.test(m.text()) && errors.push(m.text().split("\n")[0]);
-  page.on("pageerror", onError);
-  page.on("console", onConsole);
 
-  await page.goto(`${BASE}/#/${route}`, { waitUntil: "domcontentloaded" });
-  await sleep(2500);
-  const size = await page.evaluate(() => document.getElementById("root")?.innerHTML.length ?? 0);
+const walk = async (label) => {
+  for (const route of ROUTES) {
+    const where = `${label}/${route}`;
+    const errors = [];
+    const onError = (e) => errors.push(String(e.message || e).split("\n")[0]);
+    const onConsole = (m) => m.type() === "error" && !/404|favicon/.test(m.text()) && errors.push(m.text().split("\n")[0]);
+    page.on("pageerror", onError);
+    page.on("console", onConsole);
 
-  page.off("pageerror", onError);
-  page.off("console", onConsole);
+    await page.goto(`${BASE}/#/${route}`, { waitUntil: "domcontentloaded" });
+    await sleep(2500);
+    const size = await page.evaluate(() => document.getElementById("root")?.innerHTML.length ?? 0);
 
-  // a screen that renders under a few hundred characters has not really rendered
-  if (size < 500) failures.push(`/${route}: rendered ${size} chars`);
-  if (errors.length) failures.push(`/${route}: ${errors[0]}`);
-  console.log(`${failures.some((f) => f.startsWith(`/${route}:`)) ? "FAIL" : "ok  "}  /${route}  (${size} chars)`);
+    page.off("pageerror", onError);
+    page.off("console", onConsole);
+
+    // a screen that renders under a few hundred characters has not really rendered
+    if (size < 500) failures.push(`${where}: rendered ${size} chars`);
+    if (errors.length) failures.push(`${where}: ${errors[0]}`);
+    console.log(`${failures.some((f) => f.startsWith(`${where}:`)) ? "FAIL" : "ok  "}  ${where}  (${size} chars)`);
+  }
+};
+
+// every screen, in every yard the operator runs — a screen that only works for
+// the first yard is exactly the kind of thing that compiles and then blows up
+await page.goto(`${BASE}/#/dashboard`, { waitUntil: "domcontentloaded" });
+await sleep(2000);
+const yards = await page.evaluate(() => {
+  try {
+    return (JSON.parse(localStorage.getItem("easyfix.equine.world")).yards || []).map((y) => y.id);
+  } catch {
+    return [];
+  }
+});
+
+for (const yardId of yards.length ? yards : [null]) {
+  if (yardId) {
+    await page.evaluate((id) => {
+      const KEY = "easyfix.equine.world";
+      const w = JSON.parse(localStorage.getItem(KEY));
+      w.yardId = id;
+      localStorage.setItem(KEY, JSON.stringify(w));
+    }, yardId);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await sleep(1200);
+  }
+  await walk(yardId ? `[${yardId}] ` : "");
 }
 
 await browser.close();

@@ -7,9 +7,8 @@
    ========================================================================== */
 
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { VERSION, seedWorld, syncStalls, uid } from "./world";
-import { emptyPlan } from "./staff";
-import { dayKey } from "./sim";
+import { VERSION, makeYard, seedWorld, syncStalls, uid } from "./world";
+import { emptyPlan, lotsOf, planKey, planYard } from "./jobs";
 
 const KEY = "easyfix.equine.world";
 const Ctx = createContext(null);
@@ -32,6 +31,14 @@ function save(world) {
   } catch {
     /* private mode or a full quota — the app still runs, it just won't remember */
   }
+}
+
+/** The stored plan for a day at the open yard, and the key it is filed under. */
+function openPlan(w, when) {
+  const yard = planYard(w);
+  const key = planKey(yard?.id, when);
+  const stored = w.ridePlan?.[key];
+  return [key, stored ? { ...emptyPlan(lotsOf(yard)), ...stored, jobs: stored.jobs || [] } : emptyPlan(lotsOf(yard))];
 }
 
 export function WorldProvider({ children }) {
@@ -61,7 +68,8 @@ export function WorldProvider({ children }) {
       /* ------------------------------- animals ------------------------------ */
       addAnimal(animal, stallId) {
         edit((w) => {
-          w.animals = [...w.animals, animal];
+          // a horse belongs to a yard even before it is given a box
+          w.animals = [...w.animals, { yardId: planYard(w)?.id || null, ...animal }];
           if (stallId) w.stalls = w.stalls.map((s) => (s.id === stallId ? { ...s, animalId: animal.id } : s));
           w.log = [{ at: Date.now(), text: `Profile created for ${animal.name}` }, ...(w.log || [])].slice(0, 200);
           return w;
@@ -111,11 +119,15 @@ export function WorldProvider({ children }) {
       removeStaff(id) {
         edit((w) => {
           w.staff = (w.staff || []).filter((p) => p.id !== id);
-          // and out of any morning they were down to ride
+          // and out of any day they were down to work
           w.ridePlan = Object.fromEntries(
             Object.entries(w.ridePlan || {}).map(([k, plan]) => [
               k,
-              { ...plan, lots: plan.lots.map((l) => ({ ...l, rides: l.rides.filter((r) => r.riderId !== id) })) },
+              {
+                ...plan,
+                lots: plan.lots.map((l) => ({ ...l, rides: l.rides.filter((r) => r.riderId !== id) })),
+                jobs: (plan.jobs || []).map((j) => (j.staffId === id ? { ...j, staffId: null } : j)),
+              },
             ])
           );
           return w;
@@ -123,13 +135,15 @@ export function WorldProvider({ children }) {
         say("Removed");
       },
 
-      /* ------------------------------ ride planning -------------------------- */
+      /* -------------------------------- planning ---------------------------- */
 
-      /** Put a horse under a rider in a lot. A horse rides once a morning. */
+      /* The day's plan is held per yard as well as per day: a trainer with two
+         yards runs two mornings, and they must not overwrite each other. */
+
+      /** Put a horse under a rider in a lot. A horse is ridden once a morning. */
       assignRide(when, lotId, riderId, animalId) {
-        const key = dayKey(when);
         edit((w) => {
-          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          const [key, plan] = openPlan(w, when);
           const lots = plan.lots.map((lot) => {
             let rides = lot.rides;
             // a horse cannot be in two places at once, so lift it out of wherever
@@ -138,7 +152,7 @@ export function WorldProvider({ children }) {
             if (lot.id === lotId) {
               // one horse per rider per lot: replace rather than stack
               rides = rides.filter((r) => r.riderId !== riderId);
-              rides = [...rides, { id: uid("rd_"), riderId, animalId }];
+              rides = [...rides, { id: uid("rd_"), riderId, animalId, distanceF: null, activities: [] }];
             }
             return { ...lot, rides };
           });
@@ -147,10 +161,8 @@ export function WorldProvider({ children }) {
         });
       },
       clearRide(when, lotId, rideId) {
-        const key = dayKey(when);
         edit((w) => {
-          const plan = w.ridePlan?.[key];
-          if (!plan) return w;
+          const [key, plan] = openPlan(w, when);
           w.ridePlan = {
             ...w.ridePlan,
             [key]: {
@@ -161,17 +173,18 @@ export function WorldProvider({ children }) {
           return w;
         });
       },
-      setRideNote(when, lotId, rideId, note) {
-        const key = dayKey(when);
+      /** How far this horse is going, what it is doing, and anything said about it. */
+      setRideDetail(when, lotId, rideId, patch) {
         edit((w) => {
-          const plan = w.ridePlan?.[key];
-          if (!plan) return w;
+          const [key, plan] = openPlan(w, when);
           w.ridePlan = {
             ...w.ridePlan,
             [key]: {
               ...plan,
               lots: plan.lots.map((l) =>
-                l.id === lotId ? { ...l, rides: l.rides.map((r) => (r.id === rideId ? { ...r, note } : r)) } : l
+                l.id === lotId
+                  ? { ...l, rides: l.rides.map((r) => (r.id === rideId ? { ...r, ...patch } : r)) }
+                  : l
               ),
             },
           };
@@ -179,31 +192,91 @@ export function WorldProvider({ children }) {
         });
       },
       setLots(when, lots) {
-        const key = dayKey(when);
         edit((w) => {
-          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          const [key, plan] = openPlan(w, when);
           w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots } };
           return w;
         });
       },
-      /** The manager's marker that this morning is settled. */
-      markPlanSaved(when) {
-        const key = dayKey(when);
+      /** Which piece of ground this lot is working on. */
+      setLotGallop(when, lotId, gallopId) {
         edit((w) => {
-          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
+          const [key, plan] = openPlan(w, when);
+          w.ridePlan = {
+            ...w.ridePlan,
+            [key]: { ...plan, lots: plan.lots.map((l) => (l.id === lotId ? { ...l, gallopId } : l)) },
+          };
+          return w;
+        });
+      },
+
+      /* ------------------------------ the other work ------------------------ */
+
+      /** Mucking out, the farrier, the vet — work that is not ridden. */
+      addJob(when, job) {
+        const entry = { id: uid("jb_"), kind: "muckout", staffId: null, at: "", animalIds: [], note: "", ...job };
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, jobs: [...(plan.jobs || []), entry] } };
+          return w;
+        });
+        return entry;
+      },
+      updateJob(when, jobId, patch) {
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
+          w.ridePlan = {
+            ...w.ridePlan,
+            [key]: { ...plan, jobs: (plan.jobs || []).map((j) => (j.id === jobId ? { ...j, ...patch } : j)) },
+          };
+          return w;
+        });
+      },
+      removeJob(when, jobId) {
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
+          w.ridePlan = { ...w.ridePlan, [key]: { ...plan, jobs: (plan.jobs || []).filter((j) => j.id !== jobId) } };
+          return w;
+        });
+      },
+      /** A horse goes on or comes off a job. The same horse can be on several. */
+      toggleJobAnimal(when, jobId, animalId) {
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
+          w.ridePlan = {
+            ...w.ridePlan,
+            [key]: {
+              ...plan,
+              jobs: (plan.jobs || []).map((j) => {
+                if (j.id !== jobId) return j;
+                const on = (j.animalIds || []).includes(animalId);
+                return { ...j, animalIds: on ? j.animalIds.filter((x) => x !== animalId) : [...(j.animalIds || []), animalId] };
+              }),
+            },
+          };
+          return w;
+        });
+      },
+
+      /** The manager's marker that this day is settled. */
+      markPlanSaved(when) {
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
           w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, savedAt: Date.now() } };
           return w;
         });
-        say("Morning saved");
+        say("Plan saved");
       },
       clearPlan(when) {
-        const key = dayKey(when);
         edit((w) => {
-          const plan = w.ridePlan?.[key] || emptyPlan(w.settings.lots);
-          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots: plan.lots.map((l) => ({ ...l, rides: [] })) } };
+          const [key, plan] = openPlan(w, when);
+          w.ridePlan = {
+            ...(w.ridePlan || {}),
+            [key]: { ...plan, lots: plan.lots.map((l) => ({ ...l, rides: [] })), jobs: [] },
+          };
           return w;
         });
-        say("Morning cleared");
+        say("Day cleared");
       },
 
       /* ------------------------------ notifications -------------------------- */
@@ -308,12 +381,23 @@ export function WorldProvider({ children }) {
       },
 
       /* --------------------------------- barns ------------------------------ */
-      addBarn(name, yardId = "yard1") {
+      addBarn(name, yardId) {
         const id = uid("bn_");
         edit((w) => {
           w.barns = [
             ...w.barns,
-            { id, yardId, name, configured: false, cols: 0, rows: 0, cells: [], waterTankPct: 80, feedDays: 12, beddingDays: 9 },
+            {
+              id,
+              yardId: yardId || planYard(w)?.id,
+              name,
+              configured: false,
+              cols: 0,
+              rows: 0,
+              cells: [],
+              waterTankPct: 80,
+              feedDays: 12,
+              beddingDays: 9,
+            },
           ];
           return w;
         });
@@ -361,6 +445,54 @@ export function WorldProvider({ children }) {
       renameYard(yardId, name) {
         edit((w) => {
           w.yards = w.yards.map((y) => (y.id === yardId ? { ...y, name } : y));
+          return w;
+        });
+      },
+
+      /* --------------------------------- yards ------------------------------ */
+
+      /* One operator, several yards. Everything the app shows — the dashboard,
+         the barns, the horses, the day's plan — is about the yard that is open. */
+
+      openYard(yardId) {
+        edit((w) => {
+          w.yardId = yardId;
+          return w;
+        });
+      },
+      addYard(name) {
+        const yard = makeYard(name);
+        edit((w) => {
+          w.yards = [...w.yards, yard];
+          w.yardId = yard.id;
+          return w;
+        });
+        say(`${name} created`);
+        return yard;
+      },
+      /** A yard goes, and its barns, boxes and horses go with it. */
+      removeYard(yardId) {
+        edit((w) => {
+          if ((w.yards || []).length < 2) return w; // an operator always has one
+          const barns = w.barns.filter((b) => b.yardId === yardId).map((b) => b.id);
+          const stalls = w.stalls.filter((st) => barns.includes(st.barnId)).map((st) => st.id);
+          w.yards = w.yards.filter((y) => y.id !== yardId);
+          w.barns = w.barns.filter((b) => b.yardId !== yardId);
+          w.stalls = w.stalls.filter((st) => !barns.includes(st.barnId));
+          w.animals = w.animals.filter((a) => (a.yardId || w.yards[0]?.id) !== yardId);
+          w.careLog = (w.careLog || []).filter((e) => !stalls.includes(e.stallId));
+          w.ridePlan = Object.fromEntries(
+            Object.entries(w.ridePlan || {}).filter(([k]) => !k.startsWith(`${yardId}|`))
+          );
+          if (w.yardId === yardId) w.yardId = w.yards[0]?.id;
+          return w;
+        });
+        say("Yard removed");
+      },
+      /** The lots a yard runs and the ground it works on. */
+      setYardConfig(yardId, patch) {
+        edit((w) => {
+          w.yards = w.yards.map((y) => (y.id === yardId ? { ...y, ...patch } : y));
           return w;
         });
       },

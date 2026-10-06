@@ -12,6 +12,7 @@ import { airStatus, tempStatus, waterStatus, worstTone } from "../lib/status";
 import { BarChart, C, LineChart, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
+import { currentYard } from "../lib/world";
 import { go } from "../lib/router";
 import { dayReadings, startOfDay, DAY_MS, cameraEvents } from "../lib/sim";
 
@@ -19,7 +20,7 @@ export default function Dashboard({ snap }) {
   const { world, now } = useWorld();
   const [adding, setAdding] = useState(false);
   const s = world.settings;
-  const yard = world.yards[0];
+  const yard = currentYard(world);
 
   // Yard-wide hourly shape: the average of every occupied box, to this hour.
   const hourly = useMemo(() => {
@@ -76,7 +77,8 @@ export default function Dashboard({ snap }) {
         <div>
           <h1>{yard?.name || "Yard"}</h1>
           <div className="sub">
-            {snap.counts.occupied} horses in {snap.counts.configured} barns · live sensor and camera data, updating every few seconds
+            {snap.counts.occupied} horses in {snap.counts.configured} barn{snap.counts.configured === 1 ? "" : "s"} ·
+            live sensor and camera data, updating every few seconds
           </div>
         </div>
         <div className="hd-actions">

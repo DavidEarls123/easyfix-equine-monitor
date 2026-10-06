@@ -5,6 +5,7 @@ import Icon from "../components/Icons";
 import { Card, Coat, Empty, Field, Modal, Pill, Tabs } from "../components/ui";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
+import { animalsOfYard, barnsOfYard } from "../lib/world";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import Silks from "../components/Silks";
 import ScrollName from "../components/ScrollName";
@@ -26,6 +27,9 @@ export default function Animals({ snap }) {
   const [noting, setNoting] = useState(null);
   const s = world.settings;
 
+  // every list on this screen is about the yard that is open
+  const mine = useMemo(() => animalsOfYard(world), [world]);
+
   const rows = useMemo(() => {
     const live = snap.rolls.flatMap((r) => (barn === "all" || r.barn.id === barn ? r.states.filter((x) => x.animal) : []));
     const assigned = new Set(live.map((x) => x.animal.id));
@@ -33,13 +37,13 @@ export default function Animals({ snap }) {
       tab === "occupied"
         ? live
         : tab === "free"
-        ? world.animals.filter((a) => !world.stalls.some((st) => st.animalId === a.id)).map((a) => ({ animal: a, stall: null }))
-        : world.animals.map((a) => live.find((x) => x.animal.id === a.id) || { animal: a, stall: null });
+        ? mine.filter((a) => !world.stalls.some((st) => st.animalId === a.id)).map((a) => ({ animal: a, stall: null }))
+        : mine.map((a) => live.find((x) => x.animal.id === a.id) || { animal: a, stall: null });
     if (tab === "all" && barn !== "all") list = list.filter((x) => x.stall && x.stall.barnId === barn);
     const needle = q.trim().toLowerCase();
     if (needle) list = list.filter((x) => x.animal.name.toLowerCase().includes(needle));
     return list.sort((a, b) => a.animal.name.localeCompare(b.animal.name));
-  }, [snap, world, tab, barn, q]);
+  }, [snap, world, mine, tab, barn, q]);
 
   return (
     <>
@@ -47,14 +51,14 @@ export default function Animals({ snap }) {
         <div>
           <h1>Animals</h1>
           <div className="sub">
-            {world.animals.length} profiles · {snap.counts.occupied} in a box
+            {mine.length} profiles · {snap.counts.occupied} in a box
           </div>
         </div>
         <div className="hd-actions">
           <input className="inp" style={{ width: 200 }} placeholder="Filter by name" value={q} onChange={(e) => setQ(e.target.value)} />
           <select className="sel" style={{ width: "auto" }} value={barn} onChange={(e) => setBarn(e.target.value)}>
             <option value="all">All barns</option>
-            {world.barns
+            {barnsOfYard(world)
               .filter((b) => b.configured)
               .map((b) => (
                 <option key={b.id} value={b.id}>

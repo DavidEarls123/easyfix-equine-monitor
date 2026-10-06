@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Icon from "./components/Icons";
 import { RailMark, Wordmark } from "./components/Brand";
 import { useWorld } from "./lib/store";
+import { currentYard } from "./lib/world";
 import { go, useRoute } from "./lib/router";
 import { yardSnapshot } from "./lib/insights";
 import Dashboard from "./screens/Dashboard";
@@ -13,7 +14,7 @@ import Video from "./screens/Video";
 import Notifications from "./screens/Notifications";
 import Settings from "./screens/Settings";
 import Staff from "./screens/Staff";
-import Rides from "./screens/Rides";
+import Planner from "./screens/Planner";
 import Board from "./screens/Board";
 
 const NAV = [
@@ -21,11 +22,52 @@ const NAV = [
   { at: "barns", label: "Barns", icon: "barn", sub: true, parent: "yard" },
   { at: "animals", label: "Animals", icon: "head", sub: true, parent: "yard" },
   { at: "staff", label: "Staff", icon: "id", sub: true, parent: "people" },
-  { at: "rides", label: "Ride planning", icon: "helmet", sub: true, parent: "people" },
+  { at: "rides", label: "Job planner", icon: "job", sub: true, parent: "people" },
   { at: "video", label: "Video", icon: "video" },
   { at: "alerts", label: "Notifications", icon: "bell" },
   { at: "settings", label: "Settings", icon: "settings" },
 ];
+
+/**
+ * A trainer may run more than one yard, and nobody manages two at once: the
+ * picker chooses which one the whole app is about. Changing it goes back to the
+ * dashboard, because a barn or a horse id from the old yard means nothing here.
+ */
+function YardPicker() {
+  const { world, actions } = useWorld();
+  const yard = currentYard(world);
+  const yards = world.yards || [];
+
+  if (yards.length < 2)
+    return (
+      <div className="rail-item" style={{ opacity: 0.75, cursor: "default" }}>
+        <Icon name="yard" size={18} />
+        <span className="lbl">{yard?.name || "Yard"}</span>
+      </div>
+    );
+
+  return (
+    <div className="rail-item yard-pick">
+      <Icon name="yard" size={18} />
+      <select
+        className="yard-sel"
+        value={yard?.id || ""}
+        onChange={(e) => {
+          actions.openYard(e.target.value);
+          go("dashboard");
+        }}
+        aria-label="Which yard"
+      >
+        {yards.map((y) => (
+          <option key={y.id} value={y.id}>
+            {y.name}
+          </option>
+        ))}
+      </select>
+      <Icon name="chevron" size={13} />
+    </div>
+  );
+}
 
 export default function App() {
   const { world, now, toast } = useWorld();
@@ -46,7 +88,8 @@ export default function App() {
       case "staff":
         return <Staff />;
       case "rides":
-        return <Rides />;
+      case "jobs":
+        return <Planner />;
       case "board":
         return <Board />;
       case "video":
@@ -64,7 +107,7 @@ export default function App() {
     route.at === item.at ||
     (item.at === "barns" && route.at === "barn") ||
     (item.at === "animals" && route.at === "animal") ||
-    (item.at === "rides" && route.at === "board");
+    (item.at === "rides" && (route.at === "board" || route.at === "jobs"));
 
   return (
     <div className="shell">
@@ -76,10 +119,14 @@ export default function App() {
           {NAV.map((item, i) => (
             <div key={item.at}>
               {item.parent && (i === 0 || NAV[i - 1].parent !== item.parent) && (
-                <div className="rail-item" style={{ opacity: 0.75, cursor: "default" }}>
-                  <Icon name={item.parent === "people" ? "id" : "yard"} size={18} />
-                  <span className="lbl">{item.parent === "people" ? "People" : world.yards[0]?.name || "Yard"}</span>
-                </div>
+                item.parent === "people" ? (
+                  <div className="rail-item" style={{ opacity: 0.75, cursor: "default" }}>
+                    <Icon name="id" size={18} />
+                    <span className="lbl">People</span>
+                  </div>
+                ) : (
+                  <YardPicker />
+                )
               )}
               <button className={`rail-item ${item.sub ? "sub" : ""} ${on(item) ? "on" : ""}`} onClick={() => go(item.at)}>
                 {!item.sub && <Icon name={item.icon} size={19} />}

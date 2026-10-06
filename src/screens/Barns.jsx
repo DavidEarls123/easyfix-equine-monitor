@@ -7,14 +7,16 @@ import { WelfareRing } from "../components/Welfare";
 import { airStatus, tempStatus, waterStatus, worstTone } from "../lib/status";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
+import { barnsOfYard, currentYard } from "../lib/world";
 
 export default function Barns({ snap }) {
   const { world, actions } = useWorld();
   const s = world.settings;
   const [naming, setNaming] = useState(false);
   const [renaming, setRenaming] = useState(null);
-  const [name, setName] = useState(`Barn ${world.barns.length + 1}`);
-  const yard = world.yards[0];
+  const mine = barnsOfYard(world);
+  const [name, setName] = useState(`Barn ${mine.length + 1}`);
+  const yard = currentYard(world);
 
   return (
     <>
@@ -22,14 +24,14 @@ export default function Barns({ snap }) {
         <div>
           <h1>{yard?.name || "Yard"}</h1>
           <div className="sub">
-            {snap.counts.configured} of {world.barns.length} barns laid out · {snap.counts.occupied} of {snap.counts.stalls} boxes occupied
+            {snap.counts.configured} of {mine.length} barns laid out · {snap.counts.occupied} of {snap.counts.stalls} boxes occupied
           </div>
         </div>
         <div className="hd-actions">
           <button
             className="btn pri"
             onClick={() => {
-              setName(`Barn ${world.barns.length + 1}`);
+              setName(`Barn ${mine.length + 1}`);
               setNaming(true);
             }}
           >
@@ -195,7 +197,7 @@ export default function Barns({ snap }) {
               <button
                 className="btn pri"
                 onClick={() => {
-                  const id = actions.addBarn(name.trim() || `Barn ${world.barns.length + 1}`);
+                  const id = actions.addBarn(name.trim() || `Barn ${mine.length + 1}`);
                   setNaming(false);
                   go(`barn/${id}?t=layout`);
                 }}

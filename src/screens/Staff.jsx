@@ -13,7 +13,9 @@ import ScrollName from "../components/ScrollName";
 import { Card, Empty, Field, Modal, Pill, Switch, Tabs, ago } from "../components/ui";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
-import { GROUPS, groupOf, messageStamp, morningMessage, planFor, ridesOf } from "../lib/staff";
+import { GROUPS, groupOf } from "../lib/staff";
+import { furlongs, jobKind, jobsOf, messageStamp, planFor, ridesOf } from "../lib/jobs";
+import { currentYard } from "../lib/world";
 
 export default function Staff() {
   const { world, now, actions } = useWorld();
@@ -192,6 +194,7 @@ function StaffModal({ person, onClose }) {
 
   const plan = planFor(world, now);
   const mine = person.id ? ridesOf(plan, person.id) : [];
+  const myJobs = person.id ? jobsOf(plan, person.id) : [];
 
   const save = () => {
     if (!f.name.trim()) return;
@@ -262,19 +265,32 @@ function StaffModal({ person, onClose }) {
           <Switch on={f.riding !== false} label="Available to ride today" onChange={(v) => set("riding", v)} />
         )}
 
-        {mine.length > 0 && (
+        {(mine.length > 0 || myJobs.length > 0) && (
           <div>
-            <div className="tiny mute" style={{ marginBottom: 5 }}>DOWN TO RIDE TODAY</div>
+            <div className="tiny mute" style={{ marginBottom: 5 }}>DOWN FOR TODAY</div>
             {mine.map((r) => {
               const a = world.animals.find((x) => x.id === r.animalId);
+              const d = furlongs(r.distanceF);
               return (
                 <div className="row" key={r.id} style={{ gap: 8, padding: "3px 0" }}>
                   <Pill tone="flat">{r.lot.time}</Pill>
                   <ScrollName className="strong" style={{ fontSize: 13 }}>{a ? a.name : "TBC"}</ScrollName>
-                  <span className="tiny mute">{r.lot.label}</span>
+                  <span className="tiny mute">
+                    {r.lot.label}
+                    {d ? ` · ${d}` : ""}
+                  </span>
                 </div>
               );
             })}
+            {myJobs.map((j) => (
+              <div className="row" key={j.id} style={{ gap: 8, padding: "3px 0" }}>
+                <Pill tone="good">{j.at || "—"}</Pill>
+                <b style={{ fontSize: 13 }}>{j.kind === "other" && j.label ? j.label : jobKind(j.kind).label}</b>
+                <span className="tiny mute">
+                  {(j.animalIds || []).length} horse{(j.animalIds || []).length === 1 ? "" : "s"}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -288,7 +304,7 @@ function Compose({ onClose, preset }) {
   const { world, now, actions } = useWorld();
   const staff = world.staff || [];
   const [audience, setAudience] = useState(preset?.audience || "riders");
-  const [subject, setSubject] = useState(preset?.subject || `${world.yards[0]?.name || "Yard"} — ${messageStamp(now)}`);
+  const [subject, setSubject] = useState(preset?.subject || `${currentYard(world)?.name || "Yard"} — ${messageStamp(now)}`);
   const [body, setBody] = useState(preset?.body || "");
   const [channels, setChannels] = useState({ email: true, sms: false, push: true });
 

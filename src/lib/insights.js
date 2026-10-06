@@ -7,7 +7,7 @@
    ========================================================================== */
 
 import { today, trailing, cameraEvents, behaviourAt, identityCheck, dayKey, startOfDay, DAY_MS, HOUR_MS } from "./sim";
-import { animalOf, stallsOf } from "./world";
+import { animalOf, animalsOfYard, barnsOfYard, currentYard, stallsOf, stallsOfYard } from "./world";
 import { yardWelfare } from "./score";
 import { activityDeviation, intakeDeviation, learnedBaseline } from "./baseline";
 import { CARE, careToday } from "./care";
@@ -459,9 +459,15 @@ export function barnAlerts(world, roll, now) {
 
 /* --------------------------------- the yard ------------------------------- */
 
-/** One pass over the whole yard: rollups, alerts and the outliers worth naming. */
-export function yardSnapshot(world, now) {
-  const rolls = world.barns.map((b) => barnRollup(world, b, now));
+/**
+ * One pass over one yard: rollups, alerts and the outliers worth naming.
+ *
+ * An operator may run several yards, and nobody manages two at once — every
+ * number on the dashboard is about the yard that is open, not the estate.
+ */
+export function yardSnapshot(world, now, yardId = currentYard(world)?.id) {
+  const barns = barnsOfYard(world, yardId);
+  const rolls = barns.map((b) => barnRollup(world, b, now));
   const alerts = [];
   rolls.forEach((r) => {
     alerts.push(...barnAlerts(world, r, now));
@@ -496,12 +502,13 @@ export function yardSnapshot(world, now) {
     welfare,
     alerts: visible,
     allAlerts: alerts,
+    yardId,
     counts: {
-      barns: world.barns.length,
-      configured: world.barns.filter((b) => b.configured).length,
-      stalls: world.stalls.length,
+      barns: barns.length,
+      configured: barns.filter((b) => b.configured).length,
+      stalls: stallsOfYard(world, yardId).length,
       occupied: live.length,
-      animals: world.animals.length,
+      animals: animalsOfYard(world, yardId).length,
       critical: visible.filter((a) => a.severity === "critical").length,
       serious: visible.filter((a) => a.severity === "serious").length,
       warning: visible.filter((a) => a.severity === "warning").length,
@@ -530,10 +537,11 @@ export function notificationFeed(world, now, days = 7) {
 
   // Replaying every stall over every day is the one expensive thing in the app,
   // so a big yard gets a shorter history rather than a slow page.
-  const budget = Math.max(1, Math.min(days, Math.ceil(600 / Math.max(1, world.stalls.length))));
+  const mine = stallsOfYard(world, snap.yardId);
+  const budget = Math.max(1, Math.min(days, Math.ceil(600 / Math.max(1, mine.length))));
   for (let d = 1; d <= budget; d++) {
     const then = startOfDay(now) - (d - 1) * DAY_MS - HOUR_MS * 3; // late evening of that day
-    world.stalls.forEach((stall) => {
+    mine.forEach((stall) => {
       if (!stall.animalId) return;
       const st = stallState(world, stall, then);
       stallAlerts(world, st, then).forEach((a) => {

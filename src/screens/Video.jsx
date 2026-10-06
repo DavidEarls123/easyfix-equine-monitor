@@ -13,6 +13,7 @@ import CameraView from "../components/CameraView";
 import Silks from "../components/Silks";
 import ScrollName from "../components/ScrollName";
 import { useWorld } from "../lib/store";
+import { barnsOfYard, stallsOfYard } from "../lib/world";
 import { go } from "../lib/router";
 import { stallAlerts, stallState } from "../lib/insights";
 import { BEHAVIOUR, DAY_MS, behaviourAt, cameraEvents, startOfDay } from "../lib/sim";
@@ -41,7 +42,7 @@ function Wall({ snap }) {
   // every owner with a horse in a monitored box, so the list has no dead options
   const owners = useMemo(() => {
     const set = new Set();
-    world.stalls.forEach((st) => {
+    stallsOfYard(world).forEach((st) => {
       const a = st.animalId ? world.animals.find((x) => x.id === st.animalId) : null;
       if (a?.owner) set.add(a.owner);
     });
@@ -115,7 +116,7 @@ function Wall({ snap }) {
           <span>Barn</span>
           <select className="sel" value={barn} onChange={(e) => setBarn(e.target.value)}>
             <option value="all">All barns</option>
-            {world.barns
+            {barnsOfYard(world)
               .filter((b) => b.configured)
               .map((b) => (
                 <option key={b.id} value={b.id}>

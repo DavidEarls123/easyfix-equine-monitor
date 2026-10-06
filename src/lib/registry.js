@@ -49,6 +49,18 @@ Dungarvan Dawn|Mare|Bay|2020-03-18|Ocovango|Dawn Chorus|Shantou|J. Cullen
 Rathgormack|Gelding|Dark Bay|2018-02-08|Yeats|Rathgormack Rose|Presenting|R. Fenton
 Portlaw Prince|Gelding|Bay|2021-03-31|Sageburg|Portlaw Queen|Oscar|M. O'Neill
 Comeragh Mist|Mare|Grey|2019-05-15|Kayf Tara|Comeragh Belle|Beneficial|J. Cullen
+Glen Of Imaal|Gelding|Bay|2020-04-09|Shirocco|Imaal Lady|Saddlers' Hall|M. O'Neill
+Carrowmore Sands|Mare|Chestnut|2021-02-20|Mehmas|Carrowmore Girl|Kodiac|R. Fenton
+Blackstairs Bay|Gelding|Dark Bay|2019-03-24|Jukebox Jury|Blackstairs Rose|Oscar|J. Cullen
+Inchydoney|Mare|Bay|2020-05-02|Night Of Thunder|Inchy Belle|Dansili|R. Fenton
+Fethard Flyer|Gelding|Chestnut|2018-04-17|Westerner|Fethard Lass|Flemensfirth|M. O'Neill
+Oughterard Lad|Gelding|Brown|2021-03-11|Doyen|Oughterard Rose|Milan|J. Cullen
+Keeper Hill|Gelding|Bay|2019-02-26|Court Cave|Keeper Lady|Old Vic|M. O'Neill
+Dunmore Strand|Mare|Grey|2020-04-05|Clodovil|Dunmore Girl|Verglas|R. Fenton
+Ballyragget|Gelding|Bay|2018-03-19|Presenting|Ragget Rose|Bob Back|J. Cullen
+Sliabh Bloom|Mare|Bay|2021-04-28|Camelot|Bloom Of Spring|Galileo|R. Fenton
+Thomastown Boy|Gelding|Dark Bay|2019-05-09|Milan|Thomastown Lass|Beneficial|M. O'Neill
+Araglin Rose|Mare|Chestnut|2020-02-14|Getaway|Araglin Belle|Shantou|J. Cullen
 `.trim();
 
 const MARKINGS = [

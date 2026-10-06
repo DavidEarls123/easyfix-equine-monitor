@@ -10,6 +10,7 @@ import AlertList from "../components/AlertList";
 import { BarChart, C, Gauge, LineChart } from "../components/charts";
 import { NoteModal } from "./Animals";
 import { useWorld } from "../lib/store";
+import { stallsOfYard } from "../lib/world";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 import { stallAlerts, stallState } from "../lib/insights";
@@ -397,7 +398,9 @@ function Timeline({ stall, animal, now }) {
 function MoveModal({ animal, stall, onClose }) {
   const { world, actions } = useWorld();
   const [pick, setPick] = useState("");
-  const free = world.stalls
+  // boxes in this horse's own yard — moving between yards is a yard change,
+  // not a box change, so it is not offered here
+  const free = stallsOfYard(world, animal.yardId || world.yards[0]?.id)
     .filter((s) => !s.animalId || s.id === stall?.id)
     .map((s) => ({ ...s, barn: world.barns.find((b) => b.id === s.barnId) }))
     .filter((s) => s.barn?.configured);

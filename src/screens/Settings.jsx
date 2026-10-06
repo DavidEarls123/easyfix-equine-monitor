@@ -10,7 +10,8 @@ import { DEFAULT_PASSPORT, PROVIDERS, testProvider } from "../lib/passport";
 import { DEFAULT_BASELINE } from "../lib/baseline";
 import { DEFAULT_CARE } from "../lib/care";
 import { useWorld } from "../lib/store";
-import { bigYard } from "../lib/world";
+import { DEFAULT_ACTIVITIES, activitiesOf, furlongs, gallopsOf, lotsOf } from "../lib/jobs";
+import { barnsOfYard, bigYard, currentYard } from "../lib/world";
 
 export default function Settings({ snap }) {
   const { world, actions, say } = useWorld();
@@ -51,11 +52,8 @@ export default function Settings({ snap }) {
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", alignItems: "start" }}>
-        <Card title="Yard">
+        <Card title="Operator">
           <div className="grid" style={{ gap: 12 }}>
-            <Field label="Yard name">
-              <input className="inp" value={world.yards[0]?.name || ""} onChange={(e) => actions.renameYard(world.yards[0].id, e.target.value)} />
-            </Field>
             <Field label="Operator">
               <input className="inp" value={s.operator} onChange={(e) => actions.setSettings({ operator: e.target.value })} />
             </Field>
@@ -63,6 +61,18 @@ export default function Settings({ snap }) {
               <input className="inp" value={s.email} onChange={(e) => actions.setSettings({ email: e.target.value })} />
             </Field>
           </div>
+        </Card>
+
+        <Card title="Yards" sub="A trainer may run more than one. Each has its own barns, boxes and mornings.">
+          <YardEditor />
+        </Card>
+
+        <Card title="Lots and gallops" sub="For the yard that is open — the ground is different at every yard">
+          <LotEditor />
+        </Card>
+
+        <Card title="Activity tags" sub="What a horse can be down for on top of its lot">
+          <ActivityEditor />
         </Card>
 
         <Card title="Water" sub="Intake alerts are measured against each horse's own goal">
@@ -512,6 +522,274 @@ function BaselineEditor({ snap }) {
         >
           <Icon name="refresh" size={15} /> Reset to defaults
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- the operator's yards ------------------------- */
+
+/**
+ * One operator, several yards. Everything else in the app is about whichever
+ * one is open, so this is where a trainer adds the satellite up the road.
+ */
+function YardEditor() {
+  const { world, actions } = useWorld();
+  const open = currentYard(world);
+  const [adding, setAdding] = useState("");
+  const [removing, setRemoving] = useState(null);
+
+  const add = () => {
+    const name = adding.trim();
+    if (!name) return;
+    actions.addYard(name);
+    setAdding("");
+  };
+
+  return (
+    <div className="grid" style={{ gap: 10 }}>
+      {(world.yards || []).map((y) => {
+        const barns = barnsOfYard(world, y.id);
+        const boxes = world.stalls.filter((st) => barns.some((b) => b.id === st.barnId)).length;
+        return (
+          <div className={`yard-row ${y.id === open?.id ? "on" : ""}`} key={y.id}>
+            <input
+              className="inp"
+              value={y.name}
+              onChange={(e) => actions.renameYard(y.id, e.target.value)}
+              aria-label="Yard name"
+            />
+            <span className="tiny mute nowrap">
+              {barns.length} barn{barns.length === 1 ? "" : "s"} · {boxes} box{boxes === 1 ? "" : "es"}
+            </span>
+            {y.id === open?.id ? (
+              <Pill tone="good">Showing</Pill>
+            ) : (
+              <button className="btn sm" onClick={() => actions.openYard(y.id)}>
+                Open
+              </button>
+            )}
+            <button
+              className="icon-btn sm"
+              title={(world.yards || []).length < 2 ? "An operator needs one yard" : `Remove ${y.name}`}
+              disabled={(world.yards || []).length < 2}
+              onClick={() => setRemoving(y)}
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        );
+      })}
+
+      <div className="row" style={{ gap: 8 }}>
+        <input
+          className="inp"
+          placeholder="Name a new yard"
+          value={adding}
+          onChange={(e) => setAdding(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <button className="btn" disabled={!adding.trim()} onClick={add}>
+          <Icon name="plus" size={14} /> Add
+        </button>
+      </div>
+
+      {removing && (
+        <Modal
+          title={`Remove ${removing.name}?`}
+          onClose={() => setRemoving(null)}
+          footer={
+            <>
+              <button className="btn" onClick={() => setRemoving(null)}>
+                Keep it
+              </button>
+              <button
+                className="btn danger"
+                onClick={() => {
+                  actions.removeYard(removing.id);
+                  setRemoving(null);
+                }}
+              >
+                <Icon name="trash" size={15} /> Remove the yard
+              </button>
+            </>
+          }
+        >
+          <p className="small">
+            Its barns, boxes, horses and planned mornings go with it. Nothing else is touched.
+          </p>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------- lots and the gallops -------------------------- */
+
+/** The lots a yard runs, and the named ground they work on. */
+function LotEditor() {
+  const { world, actions } = useWorld();
+  const yard = currentYard(world);
+  if (!yard) return null;
+  const lots = lotsOf(yard);
+  const gallops = gallopsOf(yard);
+
+  const setLots = (next) => actions.setYardConfig(yard.id, { lots: next });
+  const setGallops = (next) => actions.setYardConfig(yard.id, { gallops: next });
+  const patch = (list, i, p) => list.map((x, k) => (k === i ? { ...x, ...p } : x));
+
+  return (
+    <div className="grid" style={{ gap: 16 }}>
+      <Field label="Lots" hint="The template this yard plans from. A day already planned keeps its own lots.">
+        <div className="grid" style={{ gap: 7 }}>
+          {lots.map((l, i) => (
+            <div className="lot-row" key={l.id || i}>
+              <input
+                className="inp nums time"
+                type="time"
+                value={l.time}
+                onChange={(e) => setLots(patch(lots, i, { time: e.target.value }))}
+              />
+              <input
+                className="inp"
+                value={l.label}
+                onChange={(e) => setLots(patch(lots, i, { label: e.target.value }))}
+              />
+              <select
+                className="sel"
+                value={l.gallopId || ""}
+                onChange={(e) => setLots(patch(lots, i, { gallopId: e.target.value || null }))}
+              >
+                <option value="">No gallop</option>
+                {gallops.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="icon-btn sm"
+                title="Remove this lot"
+                disabled={lots.length < 2}
+                onClick={() => setLots(lots.filter((_, k) => k !== i))}
+              >
+                <Icon name="trash" size={14} />
+              </button>
+            </div>
+          ))}
+          <div>
+            <button
+              className="btn sm"
+              onClick={() =>
+                setLots([...lots, { id: `lot${lots.length + 1}`, label: `Lot ${lots.length + 1}`, time: "12:00", gallopId: null }])
+              }
+            >
+              <Icon name="plus" size={14} /> Add a lot
+            </button>
+          </div>
+        </div>
+      </Field>
+
+      <Field label="Gallops" hint="Riders are told a name, so call them what the yard calls them.">
+        <div className="grid" style={{ gap: 7 }}>
+          {gallops.map((g, i) => (
+            <div className="lot-row gallop" key={g.id || i}>
+              <input
+                className="inp"
+                value={g.label}
+                onChange={(e) => setGallops(patch(gallops, i, { label: e.target.value }))}
+              />
+              <input
+                className="inp"
+                placeholder="Surface"
+                value={g.surface || ""}
+                onChange={(e) => setGallops(patch(gallops, i, { surface: e.target.value }))}
+              />
+              <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                <input
+                  className="inp nums num"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={g.furlongs || ""}
+                  onChange={(e) => setGallops(patch(gallops, i, { furlongs: Number(e.target.value) || null }))}
+                />
+                <span className="tiny mute nowrap">{furlongs(g.furlongs) || "f"}</span>
+              </div>
+              <button
+                className="icon-btn sm"
+                title="Remove this gallop"
+                onClick={() => {
+                  setGallops(gallops.filter((_, k) => k !== i));
+                  // a lot pointing at ground that no longer exists would say nothing
+                  setLots(lots.map((l) => (l.gallopId === g.id ? { ...l, gallopId: null } : l)));
+                }}
+              >
+                <Icon name="trash" size={14} />
+              </button>
+            </div>
+          ))}
+          <div>
+            <button
+              className="btn sm"
+              onClick={() =>
+                setGallops([...gallops, { id: `gl_${Date.now().toString(36)}`, label: "New gallop", surface: "", furlongs: null }])
+              }
+            >
+              <Icon name="plus" size={14} /> Add a gallop
+            </button>
+          </div>
+        </div>
+      </Field>
+    </div>
+  );
+}
+
+/* ------------------------------ activity tags ------------------------------ */
+
+/** What a horse can be down for besides its lot: swimming, the walker, lunging. */
+function ActivityEditor() {
+  const { world, actions } = useWorld();
+  const tags = activitiesOf(world.settings);
+  const set = (next) => actions.setSettings({ activities: next });
+
+  return (
+    <div className="grid" style={{ gap: 7 }}>
+      {tags.map((t, i) => (
+        <div className="lot-row tag-row" key={t.id}>
+          <input
+            className="swatch"
+            type="color"
+            value={t.colour}
+            title={`Colour for ${t.label}`}
+            onChange={(e) => set(tags.map((x, k) => (k === i ? { ...x, colour: e.target.value } : x)))}
+          />
+          <input
+            className="inp"
+            value={t.label}
+            onChange={(e) => set(tags.map((x, k) => (k === i ? { ...x, label: e.target.value } : x)))}
+          />
+          <button className="icon-btn sm" title={`Remove ${t.label}`} onClick={() => set(tags.filter((_, k) => k !== i))}>
+            <Icon name="trash" size={14} />
+          </button>
+        </div>
+      ))}
+      <div className="row" style={{ gap: 8 }}>
+        <button
+          className="btn sm"
+          onClick={() => set([...tags, { id: `ac_${Date.now().toString(36)}`, label: "New activity", colour: "#45607a" }])}
+        >
+          <Icon name="plus" size={14} /> Add a tag
+        </button>
+        {tags.length !== DEFAULT_ACTIVITIES.length && (
+          <button className="btn sm ghost" onClick={() => set(DEFAULT_ACTIVITIES.map((a) => ({ ...a })))}>
+            Back to the standard list
+          </button>
+        )}
+      </div>
+      <div className="hint">
+        Tags show on the planner, on the yard board and in every message. Removing one leaves it off those
+        horses' lines.
       </div>
     </div>
   );
