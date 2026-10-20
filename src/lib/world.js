@@ -13,9 +13,9 @@ import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
 import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
 import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
-import { silksForOwner } from "../components/Silks";
 
-export const VERSION = 11;
+
+export const VERSION = 12;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -181,10 +181,15 @@ export function makeStall(barnId, index, r, c) {
 /* --------------------------------- animals -------------------------------- */
 
 /* Most horses are fine most days — a demo that flags half the yard teaches the
-   yard to ignore the app. Roughly one box in six has something worth seeing. */
+   yard to ignore the app. Roughly one box in six has something worth seeing.
+
+   These are real, named horses, so the demo only ever simulates the box and the
+   kit — a warm box, poor air, a meter that has stopped, a horse off its water.
+   Nothing here invents an illness in somebody's horse. Anything stronger is set
+   deliberately, per horse, on its profile. */
 const SCENARIO_POOL = [
-  ...Array(34).fill("normal"),
-  "lowIntake", "poorAir", "hot", "restless", "lameness", "sensorOffline", "cold",
+  ...Array(26).fill("normal"),
+  "lowIntake", "poorAir", "hot", "sensorOffline", "cold",
 ];
 
 /** Demo horses arrived weeks or months ago, so they have history to learn from. */
@@ -200,9 +205,18 @@ export function animalFromRecord(rec, extra = {}) {
     foaled: rec.foaled,
     breed: rec.breed,
     sire: rec.sire,
+    sireCountry: rec.sireCountry,
+    sireDist: rec.sireDist,
     dam: rec.dam,
+    damCountry: rec.damCountry,
     damSire: rec.damSire,
+    damSireCountry: rec.damSireCountry,
+    damSireDist: rec.damSireDist,
+    country: rec.country,
     owner: rec.owner,
+    // the owner is the link to the colours: several owners here carry the same
+    // registered set, so the set is never copied onto the horse
+    ownerId: rec.ownerId || null,
     trainer: rec.trainer,
     breeder: rec.breeder,
     markings: rec.markings,
@@ -214,8 +228,8 @@ export function animalFromRecord(rec, extra = {}) {
     goalL: 35,
     scenario: "normal",
     groom: rec.groom || "",
-    // the owner's registered colours, matched on import where we hold them
-    silks: rec.silks || silksForOwner(rec.owner)?.id || null,
+    // only set when this horse runs in something other than its owner's colours
+    silks: rec.silks || null,
     stallNote: "",
     noteLog: [],
     seenAs: null,
@@ -227,15 +241,18 @@ export function animalFromRecord(rec, extra = {}) {
 
 /* ------------------------------ the demo yard ----------------------------- */
 
+/* Barn 1 is the hand-built corner of the demo: the horses whose boxes show one
+   of each thing worth catching, named so the walkthrough is repeatable. Every
+   one of these is a box or a meter, never the horse itself. */
 const BARN1 = [
-  ["Ndaawi", "sensorOffline"],
-  ["Honesty Policy", "normal"],
-  ["Wodhooh", "colic"],
-  ["Romeo Coolio", "normal"],
-  ["Brighterdaysahead", "normal"],
-  ["Casheldale Lad", "poorAir"],
-  ["Mordor", "hot"],
-  ["Irish Point", "lameness"],
+  ["Comanche Brave", "sensorOffline"],
+  ["A Boy Named Susie", "normal"],
+  ["Balantina", "lowIntake"],
+  ["Dee's Funny Girl", "normal"],
+  ["Where Love Lives", "normal"],
+  ["Shaihaan", "poorAir"],
+  ["Glyfada", "hot"],
+  ["Josh's Joy", "normal"],
 ];
 
 /** A yard as the operator sets one up: a name, the lots it runs and the ground
@@ -325,8 +342,8 @@ export function seedWorld() {
 
   // Two of them were moved between boxes without anyone updating the app — the
   // camera notices, which is the identity check the product is sold on.
-  const bright = world.animals.find((a) => a.name === "Brighterdaysahead");
-  const cash = world.animals.find((a) => a.name === "Casheldale Lad");
+  const bright = world.animals.find((a) => a.name === "Where Love Lives");
+  const cash = world.animals.find((a) => a.name === "Dee's Funny Girl");
   if (bright && cash) {
     bright.seenAs = cash.id;
     cash.seenAs = bright.id;
@@ -350,8 +367,8 @@ export function seedWorld() {
       stalls[i].animalId = animal.id;
     }
   };
-  fill(b2, 10, main.id);
-  fill(b3, 17, main.id);
+  fill(b2, 12, main.id);
+  fill(b3, 14, main.id);
 
   // the satellite: one barn working, one shed still to be laid out
   const h1 = addBarn("Hillside Barn", 12, true, hill.id);
@@ -448,12 +465,12 @@ function seedCare(world) {
 
   // the lines a yard actually pins to a box front
   const notes = {
-    "Honesty Policy": "Racing in Limerick 10/10/26 — cheekpieces",
-    Wodhooh: "Vet due 09:00. No hard feed until seen.",
-    Ndaawi: "Bucket by hand until the meter is fixed",
-    "Irish Point": "Trot up before work — watch the off fore",
-    Mordor: "Top door open, box runs warm",
-    "Casheldale Lad": "Extra bedding, skip out again this evening",
+    "A Boy Named Susie": "Entered at Naas Saturday — travelling box 06:00",
+    Balantina: "Off her water since yesterday evening. Tell the vet at 09:00.",
+    "Comanche Brave": "Bucket by hand until the meter is fixed",
+    Glyfada: "Top door open, box runs warm",
+    Shaihaan: "Extra bedding, skip out again this evening",
+    "Dee's Funny Girl": "Hind shoes with the farrier at ten",
   };
   world.animals.forEach((a, i) => {
     if (notes[a.name]) {

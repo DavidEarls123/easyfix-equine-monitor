@@ -10,7 +10,7 @@ import AlertList from "../components/AlertList";
 import { BarChart, C, Gauge, LineChart } from "../components/charts";
 import { NoteModal } from "./Animals";
 import { useWorld } from "../lib/store";
-import { stallsOfYard } from "../lib/world";
+import { animalsOfYard, stallsOfYard } from "../lib/world";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 import { stallAlerts, stallState } from "../lib/insights";
@@ -19,11 +19,53 @@ import { activityDeviation, intakeDeviation, learnedBaseline } from "../lib/base
 import { WelfareBreakdown, WelfareRing, WelfareTrend } from "../components/Welfare";
 import FrontOfStall from "../components/FrontOfStall";
 import Silks, { SILKS_LIST, silksForOwner } from "../components/Silks";
+import { stablemates } from "../lib/owners";
 import { COLOURS, colourOf } from "../lib/colours";
 import { CARE, careToday } from "../lib/care";
 import { BEHAVIOUR, DAY_MS, behaviourDay, cameraEvents, dayReadings, startOfDay } from "../lib/sim";
 
 const TONE = { good: "#0ca30c", warning: "#fab219", serious: "#ec835a", critical: "#d03b3b", flat: "#9fb6cb" };
+
+/**
+ * Who else looks like this coming up the gallop.
+ *
+ * Colours are registered to an owner, so every horse that owner has runs in
+ * them — and a partnership can carry a set another partnership also carries.
+ * A groom reading a set off a box front needs to know that, so the profile
+ * says it rather than leaving two identical silks to be worked out.
+ */
+function SharedColours({ animal }) {
+  const { world } = useWorld();
+  const mine = useMemo(() => animalsOfYard(world, animal.yardId), [world, animal.yardId]);
+  const { owner, set, sameOwner, sameSilks } = stablemates(mine, animal);
+  if (!owner && !set) return null;
+
+  // horses in the same colours that are not this owner's are the surprising case
+  const elsewhere = sameSilks.filter((a) => !sameOwner.some((b) => b.id === a.id));
+
+  return (
+    <div className="shared-colours">
+      {owner && (
+        <span title={owner.name}>
+          <Icon name="id" size={12} />
+          {owner.name}
+          {sameOwner.length > 0 && <b> +{sameOwner.length} more here</b>}
+        </span>
+      )}
+      {set && (
+        <span title={`${set.label}${elsewhere.length ? ` — also carried by ${elsewhere.map((a) => a.name).join(", ")}` : ""}`}>
+          <Icon name="tag" size={12} />
+          {set.label}
+          {elsewhere.length > 0 && <b> · also on {elsewhere.map((a) => a.name).join(", ")}</b>}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A pedigree line as a passport prints it: name (country) (best distance). */
+const bred = (name, country, distance) =>
+  name ? [name, country && `(${country})`, distance && `(${distance})`].filter(Boolean).join(" ") : null;
 
 export default function AnimalProfile({ id }) {
   const { world, now, actions } = useWorld();
@@ -88,6 +130,7 @@ export default function AnimalProfile({ id }) {
                 <Pill tone="warning">No box assigned</Pill>
               )}
             </div>
+            <SharedColours animal={animal} />
           </div>
         </div>
         <div className="hd-actions">
@@ -291,9 +334,9 @@ export default function AnimalProfile({ id }) {
                   ["Passport", animal.passportId],
                   ["Foaled", animal.foaled],
                   ["Breed", animal.breed],
-                  ["Sire", animal.sire],
-                  ["Dam", animal.dam],
-                  ["Dam's sire", animal.damSire],
+                  ["Sire", bred(animal.sire, animal.sireCountry, animal.sireDist)],
+                  ["Dam", bred(animal.dam, animal.damCountry)],
+                  ["Dam's sire", bred(animal.damSire, animal.damSireCountry, animal.damSireDist)],
                   ["Markings", animal.markings],
                   ["Height", animal.height],
                   ["Microchip", animal.microchip],

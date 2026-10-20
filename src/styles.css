@@ -1261,3 +1261,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .bd-gallop { font-size: 20px; font-weight: 700; color: #8ed0ff; letter-spacing: -0.01em; }
 .bd-work { font-size: 13px; font-weight: 700; color: #cfe2f5; white-space: nowrap; }
 .bd-job-ico { display: grid; place-items: center; width: 40px; flex: none; }
+
+/* who else in the yard carries this owner's colours */
+.shared-colours { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 7px; }
+.shared-colours span {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  font-size: 12px; color: var(--ink-2); background: var(--plane);
+  border: 1px solid var(--line); border-radius: 20px; padding: 2px 10px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.shared-colours b { color: var(--blue-600); font-weight: 700; }

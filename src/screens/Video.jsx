@@ -14,6 +14,7 @@ import Silks from "../components/Silks";
 import ScrollName from "../components/ScrollName";
 import { useWorld } from "../lib/store";
 import { barnsOfYard, stallsOfYard } from "../lib/world";
+import { ownerOf, ownersOf } from "../lib/owners";
 import { go } from "../lib/router";
 import { stallAlerts, stallState } from "../lib/insights";
 import { BEHAVIOUR, DAY_MS, behaviourAt, cameraEvents, startOfDay } from "../lib/sim";
@@ -39,14 +40,14 @@ function Wall({ snap }) {
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(12);
 
-  // every owner with a horse in a monitored box, so the list has no dead options
+  // every owner with a horse in a monitored box, so the list has no dead options.
+  // Matched on the owner rather than on the text, so two horses entered under
+  // the same partnership always land in the same place.
   const owners = useMemo(() => {
-    const set = new Set();
-    stallsOfYard(world).forEach((st) => {
-      const a = st.animalId ? world.animals.find((x) => x.id === st.animalId) : null;
-      if (a?.owner) set.add(a.owner);
-    });
-    return [...set].sort((a, b) => a.localeCompare(b));
+    const inBoxes = stallsOfYard(world)
+      .map((st) => (st.animalId ? world.animals.find((x) => x.id === st.animalId) : null))
+      .filter(Boolean);
+    return ownersOf(inBoxes);
   }, [world]);
 
   const all = useMemo(
@@ -58,7 +59,7 @@ function Wall({ snap }) {
     const needle = q.trim().toLowerCase();
     let out = all;
     if (barn !== "all") out = out.filter((x) => x.barn.id === barn);
-    if (owner !== "all") out = out.filter((x) => x.animal?.owner === owner);
+    if (owner !== "all") out = out.filter((x) => x.animal && ownerOf(x.animal)?.id === owner);
     if (needle.length >= 2)
       out = out.filter((x) =>
         [x.animal?.name, x.stall.name, x.barn.name, x.animal?.owner, x.animal?.trainer, x.animal?.microchip]
@@ -131,8 +132,8 @@ function Wall({ snap }) {
           <select className="sel" value={owner} onChange={(e) => setOwner(e.target.value)}>
             <option value="all">All owners</option>
             {owners.map((o) => (
-              <option key={o} value={o}>
-                {o}
+              <option key={o.id} value={o.id}>
+                {o.name} ({o.count})
               </option>
             ))}
           </select>

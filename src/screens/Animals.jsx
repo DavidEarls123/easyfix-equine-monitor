@@ -6,6 +6,7 @@ import { Card, Coat, Empty, Field, Modal, Pill, Tabs } from "../components/ui";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
 import { animalsOfYard, barnsOfYard } from "../lib/world";
+import { ownerOf, ownersOf } from "../lib/owners";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import Silks from "../components/Silks";
 import ScrollName from "../components/ScrollName";
@@ -23,12 +24,14 @@ export default function Animals({ snap }) {
   const [tab, setTab] = useState("occupied");
   const [barn, setBarn] = useState("all");
   const [q, setQ] = useState("");
+  const [owner, setOwner] = useState("all");
   const [adding, setAdding] = useState(false);
   const [noting, setNoting] = useState(null);
   const s = world.settings;
 
   // every list on this screen is about the yard that is open
   const mine = useMemo(() => animalsOfYard(world), [world]);
+  const owners = useMemo(() => ownersOf(mine), [mine]);
 
   const rows = useMemo(() => {
     const live = snap.rolls.flatMap((r) => (barn === "all" || r.barn.id === barn ? r.states.filter((x) => x.animal) : []));
@@ -40,10 +43,12 @@ export default function Animals({ snap }) {
         ? mine.filter((a) => !world.stalls.some((st) => st.animalId === a.id)).map((a) => ({ animal: a, stall: null }))
         : mine.map((a) => live.find((x) => x.animal.id === a.id) || { animal: a, stall: null });
     if (tab === "all" && barn !== "all") list = list.filter((x) => x.stall && x.stall.barnId === barn);
+    // on the owner, not the text: a partnership entered twice is still one owner
+    if (owner !== "all") list = list.filter((x) => ownerOf(x.animal)?.id === owner);
     const needle = q.trim().toLowerCase();
     if (needle) list = list.filter((x) => x.animal.name.toLowerCase().includes(needle));
     return list.sort((a, b) => a.animal.name.localeCompare(b.animal.name));
-  }, [snap, world, mine, tab, barn, q]);
+  }, [snap, world, mine, tab, barn, owner, q]);
 
   return (
     <>
@@ -56,6 +61,14 @@ export default function Animals({ snap }) {
         </div>
         <div className="hd-actions">
           <input className="inp" style={{ width: 200 }} placeholder="Filter by name" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select className="sel" style={{ width: "auto", maxWidth: 230 }} value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <option value="all">All owners</option>
+            {owners.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name} ({o.count})
+              </option>
+            ))}
+          </select>
           <select className="sel" style={{ width: "auto" }} value={barn} onChange={(e) => setBarn(e.target.value)}>
             <option value="all">All barns</option>
             {barnsOfYard(world)
