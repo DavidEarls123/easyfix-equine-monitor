@@ -1273,3 +1273,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .shared-colours b { color: var(--blue-600); font-weight: 700; }
+
+/* picking how the horse is drawn: the four finishes, drawn rather than named */
+.style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.style-pick {
+  display: grid; gap: 3px; text-align: left; cursor: pointer; padding: 7px 7px 9px;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff;
+}
+.style-pick:hover { border-color: var(--blue-300); }
+.style-pick.on { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.18); background: var(--blue-50); }
+.style-shot { display: block; border-radius: 8px; overflow: hidden; background: #06121f; }
+.style-shot canvas { display: block; width: 100%; height: auto; }
+.style-hd { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 800; margin-top: 5px; }
+.style-hint { font-size: 11.5px; color: var(--muted); line-height: 1.45; }

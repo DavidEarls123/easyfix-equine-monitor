@@ -16,6 +16,8 @@
 import { useEffect, useRef } from "react";
 import { BEHAVIOUR, behaviourAt, identityCheck } from "../lib/sim";
 import { COLOURS } from "../lib/colours";
+import { useWorld } from "../lib/store";
+import { DEFAULT_HORSE_STYLE } from "../lib/horse-style";
 
 const W = 640;
 const H = 360;
@@ -385,7 +387,125 @@ function bodyPath(ctx, lift) {
   ctx.closePath();
 }
 
-function drawHorse(ctx, P, coat, pose, night) {
+/**
+ * The finish over the flat body colour.
+ *
+ * Everything here is clipped to the body, so a highlight is a rectangle and
+ * the silhouette does the work. What a horse actually looks like under a barn
+ * light is: a bright line along the back, deep shadow under the barrel, and
+ * the shoulder and the quarters catching the light where the muscle stands
+ * proud. The dapple is what stops a flat colour looking like a cut-out.
+ */
+function finishBody(ctx, lift, mid, dark, style) {
+  if (style === "vector") return;
+
+  ctx.save();
+  bodyPath(ctx, lift);
+  ctx.clip();
+
+  if (style === "studbook") {
+    // drawn rather than lit: the creases an anatomical plate would show
+    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = "round";
+    const lines = [
+      [[-78, -128 + lift], [-56, -96 + lift], [-46, -74 + lift]], // shoulder
+      [[-40, -150 + lift], [-56, -120 + lift]], // the scapula
+      [[56, -146 + lift], [48, -108 + lift], [54, -78 + lift]], // the flank
+      [[92, -128 + lift], [78, -100 + lift], [74, -82 + lift]], // the gaskin
+      [[-20, -70 + lift], [30, -70 + lift]], // the line of the belly
+    ];
+    lines.forEach((pts) => {
+      ctx.beginPath();
+      ctx.moveTo(...pts[0]);
+      pts.slice(1).forEach((pt) => ctx.lineTo(...pt));
+      ctx.stroke();
+    });
+    ctx.restore();
+    bodyPath(ctx, lift);
+    ctx.strokeStyle = "rgba(0,0,0,0.55)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    return;
+  }
+
+  // painted and footage: muscle, then a rim light, then shadow underneath
+  const blob = (cx, cy, r, k, a) => {
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
+    g.addColorStop(0, shade(mid, k));
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = a;
+    ctx.fillStyle = g;
+    ctx.fillRect(-130, -190 + lift, 260, 200);
+    ctx.globalAlpha = 1;
+  };
+  blob(66, -126 + lift, 62, 1.16, 0.85); // the quarters
+  blob(-62, -124 + lift, 52, 1.12, 0.8); // the shoulder
+  blob(84, -92 + lift, 34, 0.84, 0.5); // under the stifle
+  blob(-16, -78 + lift, 56, 0.78, 0.55); // under the barrel
+
+  // the dapple a horse in condition carries over the ribs and the quarters —
+  // small and faint, or it reads as mud rather than as a coat
+  ctx.globalAlpha = 0.055;
+  ctx.fillStyle = shade(mid, 1.35);
+  for (let i = 0; i < 34; i++) {
+    const a = hash(i * 7 + 3);
+    const b = hash(i * 13 + 5);
+    ctx.beginPath();
+    ctx.ellipse(-70 + a * 170, -142 + lift + b * 58, 3.4 + a * 1.8, 3 + b * 1.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // the light along the back, and the dark along the belly
+  const rim = ctx.createLinearGradient(0, -166 + lift, 0, -134 + lift);
+  rim.addColorStop(0, "rgba(255,248,232,0.3)");
+  rim.addColorStop(1, "rgba(255,248,232,0)");
+  ctx.fillStyle = rim;
+  ctx.fillRect(-130, -170 + lift, 260, 42);
+  const under = ctx.createLinearGradient(0, -92 + lift, 0, -62 + lift);
+  under.addColorStop(0, "rgba(0,0,0,0)");
+  under.addColorStop(1, "rgba(0,0,0,0.34)");
+  ctx.fillStyle = under;
+  ctx.fillRect(-130, -96 + lift, 260, 40);
+  ctx.restore();
+}
+
+/* A camera does not draw clean edges. The footage style renders the horse to
+   its own canvas and then lays it down soft and grained, which is what makes a
+   frame read as a camera rather than as a picture of one. */
+let soften = null;
+function softenInto(ctx, draw) {
+  if (!soften) {
+    soften = typeof document !== "undefined" ? document.createElement("canvas") : null;
+    if (!soften) return draw(ctx);
+    soften.width = W;
+    soften.height = H;
+  }
+  const sc = soften.getContext("2d");
+  sc.clearRect(0, 0, W, H);
+  sc.save();
+  draw(sc);
+  sc.restore();
+
+  ctx.save();
+  ctx.filter = "blur(0.9px) saturate(0.88) contrast(0.95)";
+  ctx.drawImage(soften, 0, 0);
+  ctx.filter = "none";
+  // sensor grain, only where the horse is
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.restore();
+}
+
+function drawHorse(ctx, P, coat, pose, night, style = DEFAULT_HORSE_STYLE) {
+  if (style === "footage") {
+    softenInto(ctx, (sc) => paintHorse(sc, P, coat, pose, night, "painted"));
+    return;
+  }
+  paintHorse(ctx, P, coat, pose, night, style);
+}
+
+function paintHorse(ctx, P, coat, pose, night, style) {
   const [mid, dark, points] = COAT[coat] || COAT.Bay;
   const { x, y, down, flat, headX, headY, headTurn, legPhase, breathe, lame, mirror } = pose;
   const s = depthScale(y);
@@ -415,7 +535,17 @@ function drawHorse(ctx, P, coat, pose, night) {
     return;
   }
 
-  const lift = breathe;
+  /* A horse stands about as tall under the belly as it is deep through the
+     barrel. The body was sitting too low for that, which is what made it read
+     short-legged, so it is lifted and the legs run the extra distance. */
+  const lift = breathe - 22;
+  const hy = headY - 22;
+  /* head and neck together are about as long as the body. The pose says where
+     the horse is looking; these put the head the right distance out in front
+     and carry it nose-down, which is how a horse stands when nothing is
+     happening. Behaviour poses add their own turn on top. */
+  const hx = headX - 20;
+  const carriage = down ? 0 : -0.16;
 
   // off-side legs first, darker, so the near pair reads in front of them
   const off = shade(points, 0.74);
@@ -427,22 +557,7 @@ function drawHorse(ctx, P, coat, pose, night) {
   bodyPath(ctx, lift);
   ctx.fill();
 
-  // the shoulder and the quarters, picked out a shade lighter — the two places
-  // a horse's muscle actually catches the light
-  ctx.save();
-  bodyPath(ctx, lift);
-  ctx.clip();
-  const q = ctx.createRadialGradient(66, -128 + lift, 6, 66, -128 + lift, 62);
-  q.addColorStop(0, shade(mid, 1.1));
-  q.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = q;
-  ctx.fillRect(-120, -180 + lift, 240, 140);
-  const sg = ctx.createRadialGradient(-64, -126 + lift, 4, -64, -126 + lift, 52);
-  sg.addColorStop(0, shade(mid, 1.08));
-  sg.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = sg;
-  ctx.fillRect(-120, -180 + lift, 240, 140);
-  ctx.restore();
+  finishBody(ctx, lift, mid, dark, style);
 
   // tail: a dock that leaves the croup, then hair falling and swinging
   const swing = Math.sin(legPhase * 0.7) * 8;
@@ -458,8 +573,8 @@ function drawHorse(ctx, P, coat, pose, night) {
 
   // neck: a crest that rises off the withers and a throat line that cuts back
   // underneath it, so the neck tapers into the head instead of slabbing into it
-  const nx = headX + 20;
-  const ny = headY + 8;
+  const nx = hx + 22;
+  const ny = hy + 8;
   const crestX = -44 + (nx - -44) * 0.45;
   const crestY = -158 + lift + (ny - 26 - (-158 + lift)) * 0.3;
   ctx.fillStyle = body;
@@ -467,7 +582,7 @@ function drawHorse(ctx, P, coat, pose, night) {
   ctx.moveTo(-50, -156 + lift); // withers
   ctx.quadraticCurveTo(crestX, crestY - 14, nx + 2, ny - 22); // the crest
   ctx.lineTo(nx + 15, ny + 15); // into the poll and the cheek
-  ctx.quadraticCurveTo(crestX + 20, ny + 54, -66, -98 + lift); // the throat, cut back
+  ctx.quadraticCurveTo(crestX + 26, ny + 62, -64, -94 + lift); // the throat, cut back
   ctx.lineTo(-84, -116 + lift);
   ctx.closePath();
   ctx.fill();
@@ -480,14 +595,14 @@ function drawHorse(ctx, P, coat, pose, night) {
   // the withers to the poll and no further back
   ctx.fillStyle = shade(points, 0.95);
   ctx.beginPath();
-  ctx.moveTo(-48, -154 + lift);
-  ctx.quadraticCurveTo(crestX, crestY - 15, nx + 2, ny - 21);
-  ctx.quadraticCurveTo(nx - 6, ny - 8, nx - 14, ny - 6);
-  ctx.quadraticCurveTo(crestX - 6, crestY + 14, -46, -140 + lift);
+  ctx.moveTo(-50, -155 + lift);
+  ctx.quadraticCurveTo(crestX, crestY - 14, nx + 2, ny - 20);
+  ctx.quadraticCurveTo(nx - 4, ny - 12, nx - 12, ny - 11);
+  ctx.quadraticCurveTo(crestX - 4, crestY + 4, -48, -146 + lift);
   ctx.closePath();
   ctx.fill();
 
-  drawHead(ctx, { body, mid, dark, points }, headX, headY, headTurn, night);
+  drawHead(ctx, { body, mid, dark, points }, hx, hy, headTurn + carriage, night, 1.46);
   ctx.restore();
 }
 
@@ -597,7 +712,7 @@ function drawHead(ctx, c, x, y, turn, night, size = 1.26) {
   // muzzle and nostril, darker
   ctx.fillStyle = c.points;
   ctx.beginPath();
-  ctx.ellipse(-44, 1, 7, 5.5, -0.25, 0, Math.PI * 2);
+  ctx.ellipse(-45, 2, 5.5, 4.4, -0.25, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = shade(c.points, 0.45);
   ctx.beginPath();
@@ -813,9 +928,11 @@ function drawLens(ctx, night, t) {
  * on the page once the tab is in the background. A feed nobody is looking at
  * costs nothing.
  */
-export default function CameraView({ stall, animal, at, animate = true, fps = 12, overlay = true, height }) {
+export default function CameraView({ stall, animal, at, animate = true, fps = 12, overlay = true, height, style }) {
   const ref = useRef(null);
   const clock = useRef(0);
+  const { world } = useWorld();
+  const horseStyle = style || world.settings?.horseStyle || DEFAULT_HORSE_STYLE;
 
   useEffect(() => {
     const cv = ref.current;
@@ -855,7 +972,7 @@ export default function CameraView({ stall, animal, at, animate = true, fps = 12
       ctx.clearRect(0, 0, W, H);
       ctx.drawImage(roomFor(night), 0, 0);
       const pose = poseFor(seg.state, t);
-      if (!away && !offline) drawHorse(ctx, P, animal.colour, pose, night);
+      if (!away && !offline) drawHorse(ctx, P, animal.colour, pose, night, horseStyle);
       drawLens(ctx, night, t);
 
       if (offline) {
@@ -908,7 +1025,7 @@ export default function CameraView({ stall, animal, at, animate = true, fps = 12
       };
     }
     return stopAll;
-  }, [stall, animal, at, animate, fps, overlay]);
+  }, [stall, animal, at, animate, fps, overlay, horseStyle]);
 
   return <canvas ref={ref} width={W} height={H} style={height ? { height, width: "100%" } : undefined} />;
 }

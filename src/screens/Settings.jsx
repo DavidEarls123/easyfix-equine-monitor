@@ -1,7 +1,7 @@
 /* Thresholds, camera behaviour, who gets told — and the demo controls that let
    the same build stand in for an eight-box yard or a three-hundred-box one. */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import { Card, Field, Modal, Pill, Switch } from "../components/ui";
 import { WelfareRing } from "../components/Welfare";
@@ -9,6 +9,9 @@ import { COMPONENTS, DEFAULT_WEIGHTS, normalise } from "../lib/score";
 import { DEFAULT_PASSPORT, PROVIDERS, testProvider } from "../lib/passport";
 import { DEFAULT_BASELINE } from "../lib/baseline";
 import { DEFAULT_CARE } from "../lib/care";
+import { HORSE_STYLES } from "../lib/horse-style";
+import { behaviourAt } from "../lib/sim";
+import CameraView from "../components/CameraView";
 import { useWorld } from "../lib/store";
 import { DEFAULT_ACTIVITIES, activitiesOf, furlongs, gallopsOf, lotsOf } from "../lib/jobs";
 import { barnsOfYard, bigYard, currentYard } from "../lib/world";
@@ -91,6 +94,10 @@ export default function Settings({ snap }) {
             {num("nh3Max", "Ammonia limit (ppm)", null, 2, 30)}
             {num("humidityMax", "Humidity ceiling (%)", null, 50, 100)}
           </div>
+        </Card>
+
+        <Card title="How the horse is drawn" sub="The same animal and the same behaviour — only the finish changes">
+          <HorseStylePicker />
         </Card>
 
         <Card title="AI camera">
@@ -791,6 +798,56 @@ function ActivityEditor() {
         Tags show on the planner, on the yard board and in every message. Removing one leaves it off those
         horses' lines.
       </div>
+    </div>
+  );
+}
+
+/* ----------------------------- how a horse looks --------------------------- */
+
+/**
+ * Four finishes, each drawn live on the same box and the same horse, because
+ * nobody can pick a drawing style from a list of words. Whatever is chosen is
+ * what every feed in the app uses.
+ */
+function HorseStylePicker() {
+  const { world, actions } = useWorld();
+  const chosen = world.settings.horseStyle || "painted";
+  // the same box and the same horse in each, so only the finish differs
+  const stall = world.stalls.find((st) => st.animalId);
+  const animal = stall ? world.animals.find((a) => a.id === stall.animalId) : null;
+  // daylight, so the shading is the thing on show — but at an hour this horse
+  // is actually in its box, or the preview is four pictures of empty bedding
+  const at = useMemo(() => {
+    if (!stall || !animal) return Date.now();
+    const hour = (h) => {
+      const d = new Date();
+      d.setHours(h, 20, 0, 0);
+      return d.getTime();
+    };
+    const when = [15, 17, 9, 13, 19, 11].map(hour);
+    return when.find((t) => behaviourAt(stall, animal, t)?.state !== "turnout") ?? when[0];
+  }, [stall, animal]);
+
+  if (!animal) return <div className="small mute">Put a horse in a box and the styles show here.</div>;
+
+  return (
+    <div className="style-grid">
+      {HORSE_STYLES.map((s) => (
+        <button
+          key={s.id}
+          className={`style-pick ${s.id === chosen ? "on" : ""}`}
+          onClick={() => actions.setSettings({ horseStyle: s.id })}
+        >
+          <span className="style-shot">
+            <CameraView stall={stall} animal={animal} at={at} animate={false} overlay={false} style={s.id} />
+          </span>
+          <span className="style-hd">
+            {s.id === chosen && <Icon name="check" size={13} />}
+            {s.label}
+          </span>
+          <span className="style-hint">{s.hint}</span>
+        </button>
+      ))}
     </div>
   );
 }

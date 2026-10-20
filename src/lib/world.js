@@ -12,6 +12,7 @@ import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
 import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
+import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
 
 
@@ -40,6 +41,8 @@ export const DEFAULT_SETTINGS = {
   intakeLowPct: 70,
   noDrinkHours: 6,
   camera: { identify: true, behaviour: true, minConfidence: 90, retentionDays: 14 },
+  // how the horse is drawn on the feeds — a house preference, not a threshold
+  horseStyle: DEFAULT_HORSE_STYLE,
   // how the welfare index is weighted — normalised at read time, so these
   // are relative to each other rather than required to total anything
   weights: { ...DEFAULT_WEIGHTS },
