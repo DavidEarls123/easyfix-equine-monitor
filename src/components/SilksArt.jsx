@@ -134,6 +134,9 @@ export default function SilksArt({ spec, size = 44, title, className = "" }) {
       className={`silks ${className}`}
       width={size * 0.75}
       height={size}
+      /* inline, not just as attributes: a stylesheet beats an SVG's width and
+         height attributes, which would silently override the size asked for */
+      style={{ width: size * 0.75, height: size }}
       viewBox={`0 0 ${W} ${H}`}
       role="img"
       aria-label={title ? `${title} racing colours` : "Racing colours"}

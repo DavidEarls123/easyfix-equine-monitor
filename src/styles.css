@@ -354,7 +354,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .cam .cap .scroller.strong { flex: 0 0 auto; width: 56px; }
 .cam .cap .nm { flex: 1 1 auto; min-width: 0; }
 .cam .cap .silks-cell { width: 22px; }
-.cam .cap .silks-cell .silks, .cam .cap .silks-cell .silks-none { width: 18px; height: 24px; }
 .cam-pic { position: relative; display: block; }
 .cam.offline canvas { opacity: 0.5; }
 .cam-badge, .cam-state {
@@ -1115,10 +1114,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* The silks are a fixed slot wherever they sit in a row, and the name beside
    them truncates instead of wrapping, so one long name cannot shove a column
    out of line or make a camera caption two lines tall. */
+/* the slot is fixed; how big the colours are drawn inside it is the size the
+   component is asked for, so there is no sizing rule here to fight with it */
 .silks-cell { display: flex; align-items: center; justify-content: center; width: 30px; flex: none; }
-.silks-cell .silks, .silks-cell .silks-none { width: 22px; height: 29px; }
-.tbl td.col-silks, .tbl th.col-silks { width: 64px; padding-left: 6px; padding-right: 6px; }
-.tbl .col-silks .silks-cell { width: 40px; }
+/* the colours get a column of their own and are drawn big enough to tell two
+   sets apart at a glance, which is the whole reason they are in the list */
+.tbl td.col-silks, .tbl th.col-silks { width: 82px; padding: 3px 6px; }
+.tbl .col-silks .silks-cell { width: 56px; }
 
 /* the barn table reads down a column of names, so it is ranged left */
 .tbl td.name-cell, .tbl th.name-cell { text-align: left; }

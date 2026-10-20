@@ -123,7 +123,7 @@ export default function Animals({ snap }) {
                       </td>
                       <td className="col-silks">
                         <span className="silks-cell">
-                          <Silks animal={animal} size={38} />
+                          <Silks animal={animal} size={52} />
                         </span>
                       </td>
                       <td className="nums">{ageOf(animal.foaled, now) ?? "—"}</td>

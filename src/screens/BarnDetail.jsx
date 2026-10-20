@@ -267,7 +267,7 @@ function Row({ x, s, now, onAssign, onRename }) {
       </td>
       <td className="col-silks">
         <span className="silks-cell">
-          <Silks animal={animal} size={38} />
+          <Silks animal={animal} size={52} />
         </span>
       </td>
       <td className="nums">
