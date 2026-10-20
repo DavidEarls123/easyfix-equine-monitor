@@ -16,7 +16,7 @@ import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
 
 
-export const VERSION = 13;
+export const VERSION = 14;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -387,9 +387,18 @@ export function seedWorld() {
   const b3 = addBarn("Barn 3", 20);
   ["Barn 4", "Barn 5", "Barn 6", "Barn 7", "Barn 8", "Barn 9"].forEach((nm) => addBarn(nm, 0, false));
 
+  /* How full the working barns are kept. A yard is not run at a hundred per
+     cent: a box is always coming free as something goes out or comes back, and
+     a demo with every door shut has nowhere to put a horse. The first two
+     barns sit at nine tenths and whatever is left goes into the third, which
+     is where the spare room is. */
+  const FULL = 0.9;
+  const boxesIn = (barn) => stallsOf(world, barn.id).length;
+  const takes = (barn) => Math.round(boxesIn(barn) * FULL);
+
   // Barn 1 is the hand-built demo: named horses, one of each thing worth catching.
   const s1 = stallsOf(world, b1.id).sort((a, b) => a.index - b.index);
-  BARN1.forEach(([name, scenario], i) => {
+  BARN1.slice(0, takes(b1)).forEach(([name, scenario], i) => {
     const rec = byName(name);
     if (!rec || !s1[i]) return;
     const animal = animalFromRecord(rec, {
@@ -411,8 +420,10 @@ export function seedWorld() {
     cash.seenAs = bright.id;
   }
 
-  // the rest of the boxes are filled from the registry, mostly settled
-  const pool = REGISTRY.filter((r) => !BARN1.some(([nm]) => nm === r.name));
+  // the rest of the boxes are filled from the registry, mostly settled.
+  // Anything from the Barn 1 list that did not fit goes back in the pool.
+  const housed = new Set(world.animals.map((a) => a.name));
+  const pool = REGISTRY.filter((r) => !housed.has(r.name));
   let p = 0;
   const fill = (barn, count, yardId) => {
     const stalls = stallsOf(world, barn.id).sort((a, b) => a.index - b.index);
@@ -429,13 +440,15 @@ export function seedWorld() {
       stalls[i].animalId = animal.id;
     }
   };
-  fill(b2, 12, main.id);
-  fill(b3, 14, main.id);
+  fill(b2, takes(b2), main.id);
+  // Barn 3 takes the remainder of the main yard's string, with room to spare
+  const HILLSIDE = 9;
+  fill(b3, Math.min(boxesIn(b3), pool.length - HILLSIDE - takes(b2)), main.id);
 
   // the satellite: one barn working, one shed still to be laid out
   const h1 = addBarn("Hillside Barn", 12, true, hill.id);
   addBarn("Hillside Shed", 0, false, hill.id);
-  fill(h1, 9, hill.id);
+  fill(h1, HILLSIDE, hill.id);
 
   return seedPlan(seedStaff(seedCare(world)));
 }
