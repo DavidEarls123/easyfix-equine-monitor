@@ -298,10 +298,93 @@ function drawDrinker(ctx, P, x, y) {
 /* ---------------------------------- horse --------------------------------- */
 
 /**
- * The horse, shaded rather than flat: a lit top line, a darker belly, and the
- * points (legs, mane, tail, muzzle) darker again, which is what actually reads
- * as a horse at this size.
+ * The horse.
+ *
+ * At this size the thing that makes a shape read as a horse is not detail, it
+ * is anatomy: a topline that rises to the withers, dips through the back and
+ * rises again over the croup; a barrel that is deep at the girth and tucks up
+ * at the flank; a hind leg that angles back at the hock while the foreleg
+ * drops straight; and a head with a flat profile and a jaw. Three overlapping
+ * ellipses never read as any of that.
+ *
+ * So the body is one silhouette, the legs are jointed chains, and the shading
+ * is a lit topline over a dark belly with the points darker again — which is
+ * how a bay actually looks under a barn light.
+ *
+ * The horse faces left. Everything is drawn in a space where the hooves stand
+ * on y = 0 and the withers are about 160 above them.
  */
+
+/** A leg as a chain of tapering segments — the joints are what sell it. */
+function drawLeg(ctx, colour, pts, widths) {
+  ctx.strokeStyle = colour;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (let i = 0; i < pts.length - 1; i++) {
+    ctx.lineWidth = widths[i];
+    ctx.beginPath();
+    ctx.moveTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(pts[i + 1][0], pts[i + 1][1]);
+    ctx.stroke();
+  }
+  const [hx, hy] = pts[pts.length - 1];
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.moveTo(hx - 6.5, hy - 9);
+  ctx.lineTo(hx + 6.5, hy - 9);
+  ctx.lineTo(hx + 7.5, hy);
+  ctx.lineTo(hx - 7.5, hy);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** The near foreleg: shoulder, knee, cannon, fetlock, hoof — straight down. */
+function foreleg(ctx, colour, x, swing, lift, scale = 1) {
+  const w = 13 * scale;
+  drawLeg(
+    ctx,
+    colour,
+    [
+      [x, -84 + lift],
+      [x + swing * 0.3, -46],
+      [x + swing * 0.8, -16],
+      [x + swing, 0],
+    ],
+    [w, w * 0.72, w * 0.62]
+  );
+}
+
+/** The hind leg: the hock sits behind the stifle, which is the whole tell. */
+function hindleg(ctx, colour, x, swing, lift, scale = 1) {
+  const w = 15 * scale;
+  drawLeg(
+    ctx,
+    colour,
+    [
+      [x - 6, -88 + lift],
+      [x + 14, -50],
+      [x + 4 + swing * 0.7, -16],
+      [x + swing, 0],
+    ],
+    [w, w * 0.6, w * 0.55]
+  );
+}
+
+/** The outline of a standing horse, closed, ready to fill or clip. */
+function bodyPath(ctx, lift) {
+  ctx.beginPath();
+  ctx.moveTo(-90, -112 + lift); // point of shoulder
+  ctx.bezierCurveTo(-94, -138 + lift, -74, -158 + lift, -46, -158 + lift); // up to the withers
+  ctx.bezierCurveTo(-12, -156 + lift, 16, -148 + lift, 40, -150 + lift); // the back, dipped
+  ctx.bezierCurveTo(62, -152 + lift, 86, -154 + lift, 100, -138 + lift); // over the croup
+  ctx.bezierCurveTo(112, -124 + lift, 112, -100 + lift, 100, -82 + lift); // point of buttock
+  ctx.bezierCurveTo(92, -70 + lift, 74, -68 + lift, 54, -74 + lift); // the flank, tucked up
+  ctx.bezierCurveTo(26, -70 + lift, -2, -66 + lift, -28, -68 + lift); // belly, deepest behind the girth
+  ctx.bezierCurveTo(-48, -70 + lift, -62, -76 + lift, -72, -88 + lift); // elbow
+  ctx.bezierCurveTo(-82, -96 + lift, -88, -102 + lift, -90, -112 + lift);
+  ctx.closePath();
+}
+
 function drawHorse(ctx, P, coat, pose, night) {
   const [mid, dark, points] = COAT[coat] || COAT.Bay;
   const { x, y, down, flat, headX, headY, headTurn, legPhase, breathe, lame, mirror } = pose;
@@ -320,137 +403,227 @@ function drawHorse(ctx, P, coat, pose, night) {
   ctx.ellipse(0, 4, down ? 130 : 106, down ? 20 : 15, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const body = ctx.createLinearGradient(0, -120, 0, 10);
-  body.addColorStop(0, mid);
-  body.addColorStop(0.55, mid);
+  // light comes from the barn light above: lit along the back, dark underneath
+  const body = ctx.createLinearGradient(0, -168, 0, -52);
+  body.addColorStop(0, shade(mid, 1.18));
+  body.addColorStop(0.42, mid);
   body.addColorStop(1, dark);
 
   if (down) {
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.ellipse(0, -30, 104, flat ? 30 : 40, flat ? 0.04 : -0.03, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = points;
-    ctx.lineWidth = 11;
-    ctx.lineCap = "round";
-    [-44, -16, 26, 52].forEach((lx, i) => {
-      ctx.beginPath();
-      ctx.moveTo(lx, -14);
-      if (flat) ctx.lineTo(lx - 62 - i * 6, -6 + (i % 2) * 8);
-      else ctx.lineTo(lx - 26, -2);
-      ctx.stroke();
-    });
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 30;
-    ctx.beginPath();
-    ctx.moveTo(-84, -40);
-    ctx.lineTo(flat ? -166 : -134, flat ? -12 : -82);
-    ctx.stroke();
-    drawHead(ctx, body, mid, points, flat ? -186 : -148, flat ? -12 : -100, flat ? 0.15 : -0.45, night);
+    drawLying(ctx, { body, mid, dark, points }, flat, legPhase, night);
     ctx.restore();
     return;
   }
 
   const lift = breathe;
 
-  // legs first, so the barrel sits in front of them
-  ctx.strokeStyle = points;
-  ctx.lineCap = "round";
-  const legs = [
-    [-72, Math.sin(legPhase) * 9, 11],
-    [-52, Math.sin(legPhase + 2.1) * 6, 10],
-    [54, Math.sin(legPhase + 3.1) * 8, 11],
-    [78, Math.sin(legPhase + 1.2) * 6, 10],
-  ];
-  legs.forEach(([lx, sw, lw], i) => {
-    const short = lame && i === 0 ? 9 : 0;
-    ctx.lineWidth = lw;
-    ctx.beginPath();
-    ctx.moveTo(lx, -84 + lift);
-    ctx.quadraticCurveTo(lx + sw * 0.4, -44, lx + sw, -2 - short);
-    ctx.stroke();
-    // hoof
-    ctx.lineWidth = lw + 2.5;
-    ctx.beginPath();
-    ctx.moveTo(lx + sw, -5 - short);
-    ctx.lineTo(lx + sw, -1 - short);
-    ctx.stroke();
-  });
+  // off-side legs first, darker, so the near pair reads in front of them
+  const off = shade(points, 0.74);
+  foreleg(ctx, off, -58, Math.sin(legPhase + 2.1) * 7, lift, 0.9);
+  hindleg(ctx, off, 78, Math.sin(legPhase + 1.2) * 6, lift, 0.9);
 
+  // the barrel
+  ctx.fillStyle = body;
+  bodyPath(ctx, lift);
+  ctx.fill();
+
+  // the shoulder and the quarters, picked out a shade lighter — the two places
+  // a horse's muscle actually catches the light
+  ctx.save();
+  bodyPath(ctx, lift);
+  ctx.clip();
+  const q = ctx.createRadialGradient(66, -128 + lift, 6, 66, -128 + lift, 62);
+  q.addColorStop(0, shade(mid, 1.1));
+  q.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = q;
+  ctx.fillRect(-120, -180 + lift, 240, 140);
+  const sg = ctx.createRadialGradient(-64, -126 + lift, 4, -64, -126 + lift, 52);
+  sg.addColorStop(0, shade(mid, 1.08));
+  sg.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = sg;
+  ctx.fillRect(-120, -180 + lift, 240, 140);
+  ctx.restore();
+
+  // tail: a dock that leaves the croup, then hair falling and swinging
+  const swing = Math.sin(legPhase * 0.7) * 8;
+  ctx.fillStyle = points;
+  ctx.beginPath();
+  ctx.moveTo(94, -146 + lift);
+  ctx.bezierCurveTo(112, -144 + lift, 120, -120 + lift, 118 + swing, -86 + lift);
+  ctx.bezierCurveTo(117 + swing, -58, 114 + swing, -36, 108 + swing, -22);
+  ctx.bezierCurveTo(104 + swing, -34, 100 + swing, -58, 99, -88 + lift);
+  ctx.bezierCurveTo(97, -112 + lift, 92, -132 + lift, 86, -142 + lift);
+  ctx.closePath();
+  ctx.fill();
+
+  // neck: a crest that rises off the withers and a throat line that cuts back
+  // underneath it, so the neck tapers into the head instead of slabbing into it
+  const nx = headX + 20;
+  const ny = headY + 8;
+  const crestX = -44 + (nx - -44) * 0.45;
+  const crestY = -158 + lift + (ny - 26 - (-158 + lift)) * 0.3;
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.ellipse(0, -108 + lift, 90, 43, 0, 0, Math.PI * 2);
+  ctx.moveTo(-50, -156 + lift); // withers
+  ctx.quadraticCurveTo(crestX, crestY - 14, nx + 2, ny - 22); // the crest
+  ctx.lineTo(nx + 15, ny + 15); // into the poll and the cheek
+  ctx.quadraticCurveTo(crestX + 20, ny + 54, -66, -98 + lift); // the throat, cut back
+  ctx.lineTo(-84, -116 + lift);
+  ctx.closePath();
   ctx.fill();
+
+  // near-side legs
+  foreleg(ctx, points, -70, Math.sin(legPhase) * 9, lift - (lame ? 7 : 0));
+  hindleg(ctx, points, 66, Math.sin(legPhase + 3.1) * 8, lift);
+
+  // mane: one shape laid along the crest and falling on the near side, from
+  // the withers to the poll and no further back
+  ctx.fillStyle = shade(points, 0.95);
   ctx.beginPath();
-  ctx.ellipse(64, -114 + lift, 43, 46, 0, 0, Math.PI * 2);
+  ctx.moveTo(-48, -154 + lift);
+  ctx.quadraticCurveTo(crestX, crestY - 15, nx + 2, ny - 21);
+  ctx.quadraticCurveTo(nx - 6, ny - 8, nx - 14, ny - 6);
+  ctx.quadraticCurveTo(crestX - 6, crestY + 14, -46, -140 + lift);
+  ctx.closePath();
   ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-62, -112 + lift, 39, 42, 0, 0, Math.PI * 2);
-  ctx.fill();
 
-  // tail
-  ctx.strokeStyle = points;
-  ctx.lineWidth = 14;
-  ctx.beginPath();
-  ctx.moveTo(100, -138 + lift);
-  ctx.quadraticCurveTo(126 + Math.sin(legPhase * 0.7) * 7, -92, 112, -36);
-  ctx.stroke();
-
-  // neck, wide at the shoulder and tapering into the head
-  ctx.strokeStyle = mid;
-  ctx.lineCap = "round";
-  const midX = (headX - 72) / 2 - 10;
-  const midY = (headY - 132 + lift) / 2;
-  ctx.lineWidth = 42;
-  ctx.beginPath();
-  ctx.moveTo(-68, -126 + lift);
-  ctx.quadraticCurveTo(midX, midY, (headX - 68) / 2 + 4, (headY - 128) / 2);
-  ctx.stroke();
-  ctx.lineWidth = 30;
-  ctx.beginPath();
-  ctx.moveTo((headX - 68) / 2 + 4, (headY - 128) / 2);
-  ctx.quadraticCurveTo(headX + 14, headY - 6, headX + 4, headY);
-  ctx.stroke();
-
-  // mane down the crest
-  ctx.strokeStyle = points;
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(-64, -146 + lift);
-  ctx.quadraticCurveTo(midX + 6, midY - 26, headX + 10, headY - 12);
-  ctx.stroke();
-
-  drawHead(ctx, body, mid, points, headX, headY, headTurn, night);
+  drawHead(ctx, { body, mid, dark, points }, headX, headY, headTurn, night);
   ctx.restore();
 }
 
-function drawHead(ctx, body, mid, points, x, y, turn, night) {
+/** Lying down: legs folded under, or stretched flat out if cast. */
+function drawLying(ctx, c, flat, legPhase, night) {
+  ctx.fillStyle = c.body;
+  ctx.beginPath();
+  if (flat) {
+    ctx.ellipse(6, -34, 108, 32, 0.03, 0, Math.PI * 2);
+  } else {
+    ctx.moveTo(-96, -40);
+    ctx.bezierCurveTo(-92, -70, -56, -84, -10, -84);
+    ctx.bezierCurveTo(44, -84, 86, -76, 104, -54);
+    ctx.bezierCurveTo(116, -38, 110, -12, 86, -8);
+    ctx.bezierCurveTo(40, -2, -48, -2, -84, -8);
+    ctx.bezierCurveTo(-96, -12, -100, -26, -96, -40);
+    ctx.closePath();
+  }
+  ctx.fill();
+
+  // folded legs, or stretched out when cast
+  ctx.strokeStyle = c.points;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  [-50, -22, 30, 58].forEach((lx, i) => {
+    ctx.lineWidth = 12 - (i % 2) * 2;
+    ctx.beginPath();
+    ctx.moveTo(lx, -22);
+    if (flat) {
+      ctx.lineTo(lx - 44 - i * 5, -18 + (i % 2) * 10);
+      ctx.lineTo(lx - 76 - i * 7, -10 + (i % 2) * 12);
+    } else {
+      ctx.lineTo(lx - 24, -12);
+      ctx.lineTo(lx - 42, -4);
+    }
+    ctx.stroke();
+  });
+
+  // tail along the bedding
+  ctx.lineWidth = 16;
+  ctx.beginPath();
+  ctx.moveTo(96, -48);
+  ctx.quadraticCurveTo(122, -30, 110, -8);
+  ctx.stroke();
+
+  // neck and head, up if resting, flat out on the bedding if cast
+  ctx.fillStyle = c.body;
+  ctx.beginPath();
+  if (flat) {
+    ctx.moveTo(-80, -52);
+    ctx.quadraticCurveTo(-130, -40, -170, -22);
+    ctx.lineTo(-166, 2);
+    ctx.quadraticCurveTo(-124, -8, -76, -18);
+  } else {
+    ctx.moveTo(-82, -74);
+    ctx.quadraticCurveTo(-124, -78, -150, -106);
+    ctx.lineTo(-128, -124);
+    ctx.quadraticCurveTo(-106, -92, -70, -54);
+  }
+  ctx.closePath();
+  ctx.fill();
+  drawHead(ctx, c, flat ? -186 : -150, flat ? -14 : -112, flat ? 0.2 : -0.5, night);
+}
+
+/**
+ * The head: a straight profile, a cheek, and a muzzle that tapers. The ears
+ * are the other half of what makes a shape read as a horse, so they are drawn
+ * as cones rather than triangles.
+ */
+function drawHead(ctx, c, x, y, turn, night, size = 1.26) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(turn);
-  ctx.fillStyle = mid;
+  ctx.scale(size, size);
+
+  // ears, behind the head so they sit on the poll
+  ctx.fillStyle = c.dark;
+  [
+    [10, -11, 0.2],
+    [21, -9, -0.12],
+  ].forEach(([ex, ey, tilt]) => {
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.rotate(tilt);
+    ctx.beginPath();
+    ctx.moveTo(-5.5, 3);
+    ctx.quadraticCurveTo(-3, -18, 1, -26);
+    ctx.quadraticCurveTo(6, -17, 6.5, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // the head itself: a deep cheek, a jaw that sweeps up, and a muzzle about a
+  // third of that depth — a head of even depth reads as a donkey
+  ctx.fillStyle = c.mid;
   ctx.beginPath();
-  ctx.ellipse(-12, 2, 31, 15, -0.22, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-35, 11, 14, 10, -0.22, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = points;
-  ctx.beginPath();
-  ctx.ellipse(-43, 14, 7.5, 5.5, -0.22, 0, Math.PI * 2);
-  ctx.fill();
-  // ears
-  ctx.beginPath();
-  ctx.moveTo(5, -8);
-  ctx.lineTo(12, -27);
-  ctx.lineTo(19, -6);
+  ctx.moveTo(15, -8); // poll
+  ctx.bezierCurveTo(19, 4, 15, 17, 4, 20); // cheek, the deepest part
+  ctx.bezierCurveTo(-9, 22, -26, 16, -38, 10); // the jawline, sweeping up
+  ctx.bezierCurveTo(-46, 7, -50, 2, -47, -2); // the muzzle, shallow
+  ctx.bezierCurveTo(-40, -8, -18, -12, -4, -14); // the straight profile
+  ctx.bezierCurveTo(6, -15, 13, -13, 15, -8);
   ctx.closePath();
   ctx.fill();
+
+  // muzzle and nostril, darker
+  ctx.fillStyle = c.points;
+  ctx.beginPath();
+  ctx.ellipse(-44, 1, 7, 5.5, -0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = shade(c.points, 0.45);
+  ctx.beginPath();
+  ctx.ellipse(-40, -1, 2.4, 1.9, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // forelock between the ears
+  ctx.strokeStyle = c.points;
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(12, -8);
+  ctx.quadraticCurveTo(4, -6, 0, -12);
+  ctx.stroke();
+
   // eye — catches the IR emitter at night, which is what cameras actually show
   ctx.fillStyle = night ? "rgba(190,255,215,0.92)" : "rgba(14,11,9,0.9)";
   ctx.beginPath();
-  ctx.ellipse(-6, -3, night ? 3.8 : 3.2, night ? 3.4 : 2.9, 0, 0, Math.PI * 2);
+  ctx.ellipse(-1, -1, night ? 3.6 : 3.1, night ? 3.2 : 2.7, 0, 0, Math.PI * 2);
   ctx.fill();
+  if (!night) {
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.beginPath();
+    ctx.arc(-2, -2, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
