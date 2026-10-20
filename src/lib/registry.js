@@ -66,6 +66,20 @@ Transcript|IRE|Gelding|Bay|2023-05-08|Starspangledbanner|AUS|7.1|Forever Togethe
 Eniac|IRE|Colt|Chestnut|2023-04-09|Siyouni|FR|8.6|Phaenomena|IRE|Galileo|IRE|11.4|p-boyle|Flaxman Stables Ireland Ltd|Brian Ellison
 Alfresco|IRE|Filly|Bay|2024-03-06|No Nay Never|USA|7.5|Princess Noor|IRE|Holy Roman Emperor|IRE|8.1|brook-smith|Barronstown Stud
 Kilmac Air|IRE|Filly|Chestnut|2023-01-25|Dandy Man|IRE|6.4|Lady Beware|IRE|Dragon Pulse|IRE|8.1|hugh-brunton|John Kilbane|John & Sean Quinn
+Bawnmore Lass|IRE|Filly|Bay|2025-02-18|Blue Point|IRE|6.3|Silver Harbour|IRE|Galileo|IRE|11.4|bawnmore-bloodstock|Bawnmore Stud
+Clonard Boy|IRE|Colt|Chestnut|2025-03-02|Ten Sovereigns|IRE|7.6|Clonard Rose|IRE|Kodiac|IRE|6.4|clonard-partnership|Clonard House Stud
+Morning Chorus|IRE|Filly|Grey|2025-04-11|Havana Grey|GB|5.9|Dawn Whistle|IRE|Dark Angel|IRE|7.6|ardglass-stud|Ardglass Stud
+Winter Quarter|IRE|Colt|Dark bay|2025-01-29|Wootton Bassett|GB|9.2|Quarter Light|IRE|Dubawi|IRE|9.6|bawnmore-bloodstock|Bawnmore Stud
+Ballyroan Gold|IRE|Colt|Chestnut|2025-03-24|Mehmas|IRE|6.7|Golden Furrow|IRE|Exceed And Excel|AUS|6.8|keane-mcgrath|Ballyroan Farm
+Hazel Covert|IRE|Filly|Bay|2025-02-07|Camelot|GB|11.2|Covert Lady|GB|Oasis Dream|GB|7.2|clonard-partnership|Clonard House Stud
+Riverfield Rose|IRE|Filly|Brown|2025-05-03|No Nay Never|USA|7.5|Rose Of Tralee|IRE|Shamardal|USA|8.2|riverfield|Riverfield Stud
+Two Furlongs Out|IRE|Colt|Bay|2025-04-19|Supremacy|IRE|7.4|Short Head|IRE|Acclamation|GB|6.9|two-furlong|Knockaderry Stud
+Slaneyside Belle|IRE|Filly|Liver chestnut|2025-03-15|Night Of Thunder|IRE|8.1|Belle Of Enniscorthy|IRE|Montjeu|IRE|11.9|slaneyside|Slaneyside Bloodstock
+Quiet Harbour|IRE|Colt|Grey|2025-02-26|Churchill|IRE|9.6|Harbour Mist|IRE|Verglas|IRE|7.1|ardglass-stud|Ardglass Stud
+Fennor Cross|IRE|Colt|Bay|2025-04-02|Starspangledbanner|AUS|7.1|Crossing Point|IRE|High Chaparral|IRE|10.7|keane-mcgrath|Fennor Stud
+Lilac Morning|IRE|Filly|Bay|2025-01-14|Frankel|GB|10.5|Lilac Time|GB|Dansili|GB|9.8|bawnmore-bloodstock|Bawnmore Stud
+Carrick Sands|IRE|Colt|Brown|2025-05-21|Cotai Glory|GB|7.2|Sandy Shore|IRE|Kodiac|IRE|6.4|two-furlong|Knockaderry Stud
+Evening Lantern|IRE|Filly|Dark bay|2025-03-08|Sea The Stars|IRE|11.2|Lantern Light|IRE|Galileo|IRE|11.4|riverfield|Riverfield Stud
 `.trim();
 
 /** Nearly all of them are in one yard; the few that are not say so. */
@@ -142,6 +156,13 @@ export const REGISTRY_PROBLEMS = (() => {
 
 if (REGISTRY_PROBLEMS.length && typeof console !== "undefined")
   console.warn("Passport index:\n  " + REGISTRY_PROBLEMS.join("\n  "));
+
+/* A yearling is this year's crop: foaled last season, not yet in training.
+   They are kept apart because they live at the second yard. */
+export const YEARLING_FROM = "2025-01-01";
+export const isYearling = (rec) => rec.foaled >= YEARLING_FROM;
+export const YEARLINGS = REGISTRY.filter(isYearling);
+export const IN_TRAINING = REGISTRY.filter((r) => !isYearling(r));
 
 export const byName = (name) => REGISTRY.find((r) => r.name.toLowerCase() === String(name).toLowerCase());
 

@@ -58,6 +58,16 @@ export const OWNERS = [
   { id: "p-boyle", name: "P Boyle", silks: "boyle" },
   { id: "brook-smith", name: "Brook T Smith", silks: "brook-smith" },
   { id: "hugh-brunton", name: "Hugh Brunton", silks: "brunton" },
+
+  /* The yearling yard. These owners are invented, as are their colours — the
+     yard is a demonstration of a second string rather than a real one. */
+  { id: "bawnmore-bloodstock", name: "Bawnmore Bloodstock", silks: "bawnmore-bloodstock" },
+  { id: "clonard-partnership", name: "The Clonard Partnership", silks: "clonard" },
+  { id: "ardglass-stud", name: "Ardglass Stud", silks: "ardglass" },
+  { id: "keane-mcgrath", name: "Keane & McGrath", silks: "keane-mcgrath" },
+  { id: "riverfield", name: "Riverfield Racing Club", silks: "riverfield" },
+  { id: "two-furlong", name: "The Two Furlong Syndicate", silks: "two-furlong" },
+  { id: "slaneyside", name: "Slaneyside Bloodstock", silks: "slaneyside" },
 ];
 
 export const ownerById = (id) => OWNERS.find((o) => o.id === id) || null;

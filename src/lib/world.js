@@ -6,7 +6,7 @@
    which is what keeps a 300-stall yard cheap to hold in a browser.
    ========================================================================== */
 
-import { REGISTRY, byName } from "./registry";
+import { IN_TRAINING, YEARLINGS, byName } from "./registry";
 import { noise, between } from "./sim";
 import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
@@ -16,7 +16,7 @@ import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
 
 
-export const VERSION = 14;
+export const VERSION = 15;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -333,21 +333,22 @@ export function makeYard(name, id = uid("yd_")) {
  * second yard is the normal case, and a product that assumes one hides it.
  */
 export function seedWorld() {
-  const main = makeYard("Rathmore Lodge", "yard1");
+  const main = makeYard("Bawnmore", "yard1");
   main.lots[0].gallopId = "gl_round";
   main.lots[1].gallopId = "gl_straight";
   main.lots[2].gallopId = "gl_hill";
   main.lots[3].gallopId = "gl_canter";
 
-  const hill = makeYard("Hillside Yard", "yard2");
+  const hill = makeYard("Yearling Yard", "yard2");
+  // a yearling yard is breaking and long-reining, not working on a gallop
   hill.gallops = [
-    { id: "gl_top", label: "Top Of The Hill", surface: "Grass", furlongs: 6 },
-    { id: "gl_lower", label: "Lower Canter", surface: "Woodchip", furlongs: 5 },
     { id: "gl_sandring", label: "Sand Ring", surface: "Sand", furlongs: 2 },
+    { id: "gl_lunge", label: "Lunge Ring", surface: "Sand", furlongs: 1 },
+    { id: "gl_longwalk", label: "The Long Walk", surface: "Woodchip", furlongs: 4 },
   ];
   hill.lots = hill.lots.slice(0, 2);
-  hill.lots[0].gallopId = "gl_top";
-  hill.lots[1].gallopId = "gl_lower";
+  hill.lots[0].gallopId = "gl_sandring";
+  hill.lots[1].gallopId = "gl_longwalk";
 
   const world = {
     version: VERSION,
@@ -382,7 +383,7 @@ export function seedWorld() {
     return barn;
   };
 
-  const b1 = addBarn("Barn 1", 8);
+  const b1 = addBarn("Barn 1", 20);
   const b2 = addBarn("Barn 2", 12);
   const b3 = addBarn("Barn 3", 20);
   ["Barn 4", "Barn 5", "Barn 6", "Barn 7", "Barn 8", "Barn 9"].forEach((nm) => addBarn(nm, 0, false));
@@ -420,13 +421,15 @@ export function seedWorld() {
     cash.seenAs = bright.id;
   }
 
-  // the rest of the boxes are filled from the registry, mostly settled.
-  // Anything from the Barn 1 list that did not fit goes back in the pool.
+  // the rest of the boxes are filled from the horses in training, mostly
+  // settled. Anything from the Barn 1 list that did not fit stays in the pool.
   const housed = new Set(world.animals.map((a) => a.name));
-  const pool = REGISTRY.filter((r) => !housed.has(r.name));
+  const pool = IN_TRAINING.filter((r) => !housed.has(r.name));
   let p = 0;
   const fill = (barn, count, yardId) => {
-    const stalls = stallsOf(world, barn.id).sort((a, b) => a.index - b.index);
+    const stalls = stallsOf(world, barn.id)
+      .filter((st) => !st.animalId)
+      .sort((a, b) => a.index - b.index);
     for (let i = 0; i < count && p < pool.length; i++, p++) {
       const rec = pool[p];
       const scenario = SCENARIO_POOL[Math.floor(noise(`sc|${rec.name}`) * SCENARIO_POOL.length)];
@@ -440,15 +443,21 @@ export function seedWorld() {
       stalls[i].animalId = animal.id;
     }
   };
+  // Barn 1 is topped up past its named horses, then the next barn, and Barn 3
+  // takes whatever is left of the string — which is where the spare room is
+  fill(b1, takes(b1) - stallsOf(world, b1.id).filter((st) => st.animalId).length, main.id);
   fill(b2, takes(b2), main.id);
-  // Barn 3 takes the remainder of the main yard's string, with room to spare
-  const HILLSIDE = 9;
-  fill(b3, Math.min(boxesIn(b3), pool.length - HILLSIDE - takes(b2)), main.id);
+  fill(b3, Math.min(boxesIn(b3), pool.length - p), main.id);
 
-  // the satellite: one barn working, one shed still to be laid out
-  const h1 = addBarn("Hillside Barn", 12, true, hill.id);
-  addBarn("Hillside Shed", 0, false, hill.id);
-  fill(h1, HILLSIDE, hill.id);
+  /* The second yard: this year's crop, being broken rather than trained. The
+     horses, their owners and their colours are all invented — it is a second
+     string to show the app handles one, not a real one. */
+  const y1 = addBarn("Barn 1", 16, true, hill.id);
+  addBarn("Barn 2", 0, false, hill.id);
+  p = 0;
+  pool.length = 0;
+  pool.push(...YEARLINGS);
+  fill(y1, takes(y1), hill.id);
 
   return seedPlan(seedStaff(seedCare(world)));
 }
