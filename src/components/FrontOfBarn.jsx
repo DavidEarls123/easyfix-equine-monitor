@@ -17,7 +17,7 @@ import Silks from "./Silks";
 import ScrollName from "./ScrollName";
 import FrontOfStall from "./FrontOfStall";
 import { careRollup, careToday } from "../lib/care";
-import { CELL } from "../lib/world";
+import { CELL, compactLayout } from "../lib/world";
 import { airStatus, tempStatus, waterStatus, worstTone } from "../lib/status";
 import { useWorld } from "../lib/store";
 
@@ -33,10 +33,9 @@ export default function FrontOfBarn({ roll, now }) {
   const air = airStatus(roll.occupied ? roll.air : null, s);
   const openAlerts = roll.alerts.filter((a) => a.severity !== "info");
 
-  const grid = [];
-  for (let r = 0; r < barn.rows; r++)
-    for (let c = 0; c < barn.cols; c++)
-      grid.push(barn.cells.find((x) => x.r === r && x.c === c) || { r, c, kind: "empty" });
+  // the shape that was drawn, not the grid it was drawn on: an L or a U keeps
+  // its corner empty, but the rows and columns outside it are not rendered
+  const { cols, grid } = compactLayout(barn);
 
   return (
     <div className="fob">
@@ -65,7 +64,7 @@ export default function FrontOfBarn({ roll, now }) {
       <div className="fob-plan-wrap">
         <div
           className="fob-plan"
-          style={{ gridTemplateColumns: `repeat(${barn.cols}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
         >
         {grid.map((cell) => {
           if (cell.kind !== "stall")

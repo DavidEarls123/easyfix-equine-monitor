@@ -18,7 +18,7 @@ import Silks from "../components/Silks";
 import ScrollName from "../components/ScrollName";
 import { go } from "../lib/router";
 import { barnAlerts } from "../lib/insights";
-import { CELL } from "../lib/world";
+import { CELL, compactLayout } from "../lib/world";
 import { DAY_MS, dayReadings, startOfDay } from "../lib/sim";
 
 const TABS = [
@@ -402,12 +402,9 @@ function Layout({ roll, editing, setEditing, onAssign }) {
       </Card>
     );
 
-  const grid = [];
-  for (let r = 0; r < barn.rows; r++)
-    for (let c = 0; c < barn.cols; c++) {
-      const cell = barn.cells.find((x) => x.r === r && x.c === c) || { r, c, kind: "empty" };
-      grid.push(cell);
-    }
+  // trimmed to the shape that was drawn, so an L or a U is not padded out
+  // into the rectangle it was drawn inside
+  const { cols, grid } = compactLayout(barn);
 
   return (
     <Card
@@ -419,7 +416,7 @@ function Layout({ roll, editing, setEditing, onAssign }) {
         </button>
       }
     >
-      <div className="layout-grid" style={{ gridTemplateColumns: `repeat(${barn.cols}, minmax(0,1fr))`, maxWidth: barn.cols * 128 }}>
+      <div className="layout-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, maxWidth: cols * 128 }}>
         {grid.map((cell) => {
           const stall = stalls.find((s) => s.r === cell.r && s.c === cell.c);
           const animal = stall?.animalId ? world.animals.find((a) => a.id === stall.animalId) : null;

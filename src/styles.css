@@ -796,7 +796,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   container-type: inline-size; aspect-ratio: 16 / 9; display: flex; flex-direction: column;
   overflow: hidden;
 }
-.fob-plan-wrap { flex: 1; min-height: 0; overflow: auto; padding: 2px 0; }
+.fob-plan-wrap { flex: 1; min-height: 0; overflow: hidden; padding: 2px 0; }
 .fob-hd { display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
 .fob-hd h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
 .fob-sub { font-size: 13px; color: #9cb8dd; margin-top: 2px; }
@@ -814,8 +814,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .fob-reading.serious { color: #ffb08a; }
 .fob-reading.critical { color: #ff9c9c; }
 
-/* the plan fills the frame rather than sitting at the top of it */
-.fob-plan { display: grid; gap: 8px; height: 100%; grid-auto-rows: minmax(92px, 1fr); }
+/* The plan fills the frame rather than sitting at the top of it, and the rows
+   share whatever height there is — a shed drawn as an L, a U or a T is five
+   rows deep where a plain double row is three, and it still has to fit the
+   screen on the barn door without scrolling. */
+.fob-plan { display: grid; gap: 8px; height: 100%; grid-auto-rows: 1fr; min-height: 0; }
+.fob-plan .fob-cell, .fob-plan .fob-box { min-height: 0; }
 .fob-cell {
   container-type: inline-size;
   border-radius: 8px; min-height: 96px; display: grid; place-items: center;
@@ -913,7 +917,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* Each box sizes its own contents now, so the panel does not override them —
    it only drops the row height so more of a big barn fits on one screen. */
 @container (max-width: 760px) {
-  .fob-cell, .fob-box { min-height: 74px; }
+  .fob-cell, .fob-box { min-height: 0; }
 }
 
 /* --------------------------------- staff ---------------------------------- */
@@ -1349,3 +1353,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .bc-rounds { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 2px; }
 .bc-round { display: flex; align-items: center; gap: 6px; flex: 1 1 110px; min-width: 0; font-size: 12px; }
 .bc-round .round-bar { flex: 1; min-width: 34px; height: 6px; }
+
+/* moving a box rather than painting one: it is picked up, not drawn over */
+.layout-grid.moving .cell { cursor: default; }
+.layout-grid.moving .cell.stall { cursor: grab; }
+.layout-grid.moving .cell.stall:active { cursor: grabbing; }
+.layout-grid.moving .cell.movable:hover { outline: 2px solid var(--blue); outline-offset: -2px; }
+.layout-grid .cell.lifted { outline: 2px dashed var(--blue); outline-offset: -2px; opacity: 0.6; }

@@ -92,6 +92,36 @@ export function makeLayout(stallCount, opts = {}) {
   return { cols, rows, cells };
 }
 
+/**
+ * A barn trimmed to the shape that was actually drawn.
+ *
+ * Not every shed is a rectangle. An L, a U and a T are all drawn on the same
+ * grid with the corners left empty, and if the screens render the whole grid
+ * those empty corners eat the space the boxes needed. So any row or column
+ * with nothing in it at all is dropped — which trims the outside of an L
+ * without closing the gap in the middle of a U, because that gap's column
+ * still has the two arms in it.
+ */
+export function compactLayout(barn) {
+  const cells = (barn?.cells || []).filter((c) => c.kind && c.kind !== "empty");
+  if (!cells.length) return { cols: 0, rows: 0, grid: [] };
+
+  const liveRows = [...new Set(cells.map((c) => c.r))].sort((a, b) => a - b);
+  const liveCols = [...new Set(cells.map((c) => c.c))].sort((a, b) => a - b);
+  const rowAt = new Map(liveRows.map((r, i) => [r, i]));
+  const colAt = new Map(liveCols.map((c, i) => [c, i]));
+
+  const at = new Map(cells.map((c) => [`${c.r}:${c.c}`, c]));
+  const grid = [];
+  liveRows.forEach((r) =>
+    liveCols.forEach((c) => {
+      const cell = at.get(`${r}:${c}`);
+      grid.push(cell || { r, c, kind: "empty" });
+    })
+  );
+  return { cols: liveCols.length, rows: liveRows.length, grid, rowAt, colAt };
+}
+
 export function stallsOf(world, barnId) {
   return world.stalls.filter((s) => s.barnId === barnId);
 }
@@ -146,21 +176,49 @@ export function stallById(world, stallId) {
 }
 
 /** Build the stall records for a barn from its layout, keeping any existing ones. */
+/**
+ * Rebuild a barn's boxes from its layout, keeping the ones that already exist.
+ *
+ * A box is matched by the id the layout cell carries, not by where it sits, so
+ * moving a box in the editor moves the box — the horse in it, its name, its
+ * camera and its history go with it. Only a cell with no id at all is a new
+ * box. Layouts drawn before cells carried ids fall back to matching on
+ * position, so an existing yard does not lose its boxes on first open.
+ */
 export function syncStalls(world, barn) {
   const existing = stallsOf(world, barn.id);
+  const byId = new Map(existing.map((s) => [s.id, s]));
   const byPos = new Map(existing.map((s) => [`${s.r}:${s.c}`, s]));
-  const kept = [];
-  let i = 0;
-  barn.cells
-    .filter((c) => c.kind === "stall")
-    .sort((a, b) => a.r - b.r || a.c - b.c)
-    .forEach((c) => {
-      i++;
-      const was = byPos.get(`${c.r}:${c.c}`);
-      if (was) kept.push({ ...was, index: i, name: was.renamed ? was.name : `Stall ${i}` });
-      else kept.push(makeStall(barn.id, i, c.r, c.c));
-    });
-  const dropped = existing.filter((s) => !kept.some((k) => k.id === s.id));
+  const claimed = new Set();
+  const cells = barn.cells.filter((c) => c.kind === "stall").sort((a, b) => a.r - b.r || a.c - b.c);
+
+  // ids first, so a box that moved cannot be stolen by whatever took its place
+  const matched = cells.map((c) => {
+    const was = c.sid ? byId.get(c.sid) : null;
+    if (was && !claimed.has(was.id)) {
+      claimed.add(was.id);
+      return was;
+    }
+    return null;
+  });
+  cells.forEach((c, k) => {
+    if (matched[k]) return;
+    const was = byPos.get(`${c.r}:${c.c}`);
+    if (was && !claimed.has(was.id)) {
+      claimed.add(was.id);
+      matched[k] = was;
+    }
+  });
+
+  const kept = cells.map((c, k) => {
+    const i = k + 1;
+    const was = matched[k];
+    return was
+      ? { ...was, r: c.r, c: c.c, index: i, name: was.renamed ? was.name : `Stall ${i}` }
+      : makeStall(barn.id, i, c.r, c.c);
+  });
+
+  const dropped = existing.filter((s) => !claimed.has(s.id));
   const others = world.stalls.filter((s) => s.barnId !== barn.id);
   return { stalls: [...others, ...kept], dropped };
 }

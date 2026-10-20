@@ -511,6 +511,13 @@ export function WorldProvider({ children }) {
           w.barns = w.barns.map((b) => (b.id === barnId ? barn : b));
           const synced = syncStalls(w, barn);
           w.stalls = synced.stalls;
+          // a box that went with the layout cannot stay on somebody's round
+          if (synced.dropped.length) {
+            const gone = new Set(synced.dropped.map((st) => st.id));
+            w.rounds = (w.rounds || [])
+              .map((r) => ({ ...r, stallIds: (r.stallIds || []).filter((id) => !gone.has(id)) }))
+              .filter((r) => r.stallIds.length);
+          }
           return w;
         });
         say("Layout saved");
