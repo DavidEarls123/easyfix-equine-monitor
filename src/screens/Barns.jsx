@@ -1,6 +1,6 @@
 /* Yard → Barns: every building at a glance, configured or not. */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Icon from "../components/Icons";
 import { Card, Field, Modal, Pill } from "../components/ui";
 import { WelfareRing } from "../components/Welfare";
@@ -8,9 +8,15 @@ import { airStatus, tempStatus, waterStatus, worstTone } from "../lib/status";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 import { barnsOfYard, currentYard } from "../lib/world";
+import { ROUND_KINDS, barnRoundProgress } from "../lib/rounds";
 
 export default function Barns({ snap }) {
-  const { world, actions } = useWorld();
+  const { world, now, actions } = useWorld();
+  // one pass for every barn, rather than once per tile
+  const rounds = useMemo(
+    () => Object.fromEntries(barnsOfYard(world).map((b) => [b.id, barnRoundProgress(world, b.id, now)])),
+    [world, now]
+  );
   const s = world.settings;
   const [naming, setNaming] = useState(false);
   const [renaming, setRenaming] = useState(null);
@@ -101,11 +107,32 @@ export default function Barns({ snap }) {
                   </div>
 
                   {r.occupied > 0 ? (
-                    <div className="bc-stats">
-                      <Stat icon="water" label="Water" value={`${r.pctOfGoal}%`} st={water} />
-                      <Stat icon="temp" label="Temperature" value={`${r.tempC}°C`} st={temp} />
-                      <Stat icon="air" label="Air" value={`${r.air}%`} st={air} />
-                    </div>
+                    <>
+                      <div className="bc-stats">
+                        <Stat icon="water" label="Water" value={`${r.pctOfGoal}%`} st={water} />
+                        <Stat icon="temp" label="Temperature" value={`${r.tempC}°C`} st={temp} />
+                        <Stat icon="air" label="Air" value={`${r.air}%`} st={air} />
+                      </div>
+                      {/* how far through the boxes the grooms are, off the stall
+                          screens — the number a manager asks for first */}
+                      <div className="bc-rounds">
+                        {ROUND_KINDS.map((k) => {
+                          const p = rounds[b.id]?.[k.id];
+                          if (!p) return null;
+                          return (
+                            <span key={k.id} className="bc-round" title={`${k.label}: ${p.done} of ${p.boxes} boxes up to date`}>
+                              <Icon name={k.icon} size={13} style={{ color: k.colour }} />
+                              <b className="nums">
+                                {p.done}/{p.boxes}
+                              </b>
+                              <i className="round-bar">
+                                <span className={p.tone} style={{ width: `${p.pct}%` }} />
+                              </i>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </>
                   ) : (
                     <div className="bc-empty small mute">Laid out, but no horses assigned yet.</div>
                   )}

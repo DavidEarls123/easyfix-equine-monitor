@@ -39,7 +39,19 @@ import {
   planSummary,
   ridesOf,
 } from "../lib/jobs";
-import { currentYard, animalsOfYard, stallOfAnimal } from "../lib/world";
+import { currentYard, animalsOfYard, stallOfAnimal, stallsOfYard } from "../lib/world";
+import {
+  describeRound,
+  isRoundKind,
+  roundFor,
+  roundKind,
+  roundOfStall,
+  roundProgress,
+  roundsOf,
+  stallDue,
+  suggestRun,
+  unassigned,
+} from "../lib/rounds";
 
 const JOBS_TAB = "__jobs";
 
@@ -49,6 +61,7 @@ export default function Planner() {
   const plan = planFor(world, now, yard);
   const horses = useMemo(() => animalsOfYard(world), [world]);
   const [tab, setTab] = useState(plan.lots[0]?.id);
+  const [kind, setKind] = useState("muckout"); // which job the people grid is for
   const [held, setHeld] = useState(null); // the horse picked up, waiting to be put down
   const [q, setQ] = useState("");
   const [showRiders, setShowRiders] = useState(false);
@@ -82,11 +95,11 @@ export default function Planner() {
     actions.assignRide(now, lot.id, riderId, animalId);
     setHeld(null);
   };
-  const drop = (jobId, animalId) => {
+  // the same gesture as putting a horse under a rider: the job is made for
+  // that person if it does not exist yet
+  const putOnJob = (staffId, animalId) => {
     if (!animalId) return;
-    const job = jobs.find((j) => j.id === jobId);
-    if (job && (job.animalIds || []).includes(animalId)) return setHeld(null);
-    actions.toggleJobAnimal(now, jobId, animalId);
+    actions.assignJob(now, kind, staffId, animalId, jobKind(kind).at);
     setHeld(null);
   };
 
@@ -147,12 +160,16 @@ export default function Planner() {
 
       {/* this row is always here, filled or not, so picking a horse up never
           shifts what is underneath the manager's cursor */}
-      <div className={`held-bar ${held ? "on" : ""}`}>
+      {/* picking a horse up means nothing when the job is a run of boxes */}
+      <div
+        className={`held-bar ${held ? "on" : ""}`}
+        style={onJobs && isRoundKind(kind) ? { display: "none" } : undefined}
+      >
         {held ? (
           <>
             <Coat animal={held} size={26} />
             <b>{held.name}</b>
-            <span>picked up — now tap {onJobs ? "the job it belongs to" : "the rider who is on it"}</span>
+            <span>picked up — now tap {onJobs ? "whoever is doing it" : "the rider who is on it"}</span>
             <button className="btn sm ghost" onClick={() => setHeld(null)}>
               Put back
             </button>
@@ -161,15 +178,23 @@ export default function Planner() {
           <>
             <Icon name="head" size={18} />
             <span>
-              Tap a horse to pick it up, or drag it straight onto {onJobs ? "a job" : "a rider"}.
+              Tap a horse to pick it up, or drag it straight onto {onJobs ? "the person doing the job" : "a rider"}.
             </span>
           </>
         )}
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(300px,0.52fr)", alignItems: "start" }}>
+      <div
+        className="grid"
+        style={{
+          // handing out boxes needs the room; the pool of horses is for the
+          // jobs that are assigned a horse at a time
+          gridTemplateColumns: onJobs && isRoundKind(kind) ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(300px,0.52fr)",
+          alignItems: "start",
+        }}
+      >
         {onJobs ? (
-          <JobsPanel plan={plan} held={held} onDrop={drop} />
+          <JobsPanel plan={plan} kind={kind} onKind={setKind} held={held} onPlace={putOnJob} />
         ) : (
           <LotPanel
             lot={lot}
@@ -183,7 +208,7 @@ export default function Planner() {
         )}
 
         {/* the horses still to be found something to do, and what the plan says */}
-        <div className="grid">
+        <div className="grid" style={onJobs && isRoundKind(kind) ? { display: "none" } : undefined}>
           <Card
             title={onJobs ? "Every horse" : "Horses not down yet"}
             sub={
@@ -494,164 +519,418 @@ function RideDetail({ lot, ride, animal, onClose }) {
 
 /* ------------------------------ the other work ---------------------------- */
 
-function JobsPanel({ plan, held, onDrop }) {
+/**
+ * The other work, laid out the way the lots are: pick what is being done, and
+ * you get the people who do it. A horse goes onto a person in one gesture —
+ * there is no job to create first, because a job is just a person with horses
+ * against their name.
+ */
+function JobsPanel({ plan, kind, onKind, held, onPlace }) {
   const { world, now, actions } = useWorld();
   const jobs = plan.jobs || [];
   const summary = planSummary(plan, world.staff, animalsOfYard(world));
+  const spec = jobKind(kind);
+  const people = spec.group === "all" ? world.staff || [] : staffIn(world.staff, spec.group);
 
   return (
-    <Card
-      title="Jobs around the yard"
-      sub="Mucking out, the farrier, the vet — everything that is not ridden"
-      right={
-        <div className="row" style={{ gap: 8 }}>
-          <button className="btn sm" onClick={() => actions.addJob(now, {})}>
-            <Icon name="plus" size={14} /> Add a job
-          </button>
-          <button
-            className="btn sm act"
-            disabled={!summary.rides && !summary.jobs}
-            onClick={() => actions.markPlanSaved(now)}
-          >
-            <Icon name="check" size={14} /> Save the day
-          </button>
-        </div>
-      }
-    >
-      {!jobs.length ? (
-        <Empty icon="job">
-          Nothing else is down for today.
-          <div style={{ marginTop: 10 }}>
-            <button className="btn pri" onClick={() => actions.addJob(now, {})}>
-              Add the first job
+    /* one grid child, so the kind bar and the people sit in the left column
+       together and the pool stays where it is on the lot tabs */
+    <div className="grid" style={{ gap: 0 }}>
+      {/* what is being done — the jobs equivalent of the lot tabs */}
+      <div className="kind-bar">
+        {JOB_KINDS.map((k) => {
+          // mucking out and feeding count boxes on a round; the rest count
+          // horses put down for the day
+          const n = isRoundKind(k.id)
+            ? roundsOf(world, k.id).reduce((a, r) => a + (r.stallIds || []).length, 0)
+            : jobs.filter((j) => j.kind === k.id).reduce((a, j) => a + (j.animalIds || []).length, 0);
+          return (
+            <button
+              key={k.id}
+              className={`kind-tab ${k.id === kind ? "on" : ""}`}
+              style={{ "--kind": k.colour }}
+              onClick={() => onKind(k.id)}
+            >
+              <Icon name={k.icon} size={15} />
+              <span>{k.label}</span>
+              {n > 0 && <span className="kind-n nums">{n}</span>}
             </button>
-          </div>
-        </Empty>
+          );
+        })}
+      </div>
+
+      {isRoundKind(kind) ? (
+        <RoundsPanel kind={kind} people={people} />
       ) : (
-        <div className="job-grid">
-          {jobs.map((j) => (
-            <JobCard key={j.id} job={j} held={held} onDrop={onDrop} />
-          ))}
-        </div>
+        <Card
+          title={spec.label}
+          sub={
+            people.length
+              ? `${jobs.filter((j) => j.kind === kind && (j.animalIds || []).length).length} of ${people.length} ${groupOf(spec.group).label.toLowerCase()} have horses down`
+              : `Nobody is in the ${groupOf(spec.group).label.toLowerCase()} group yet`
+          }
+          right={
+            <button
+              className="btn sm act"
+              disabled={!summary.rides && !summary.jobs}
+              onClick={() => actions.markPlanSaved(now)}
+            >
+              <Icon name="check" size={14} /> Save the day
+            </button>
+          }
+        >
+          {!people.length ? (
+            <Empty icon="id">
+              {spec.label} is done by the {groupOf(spec.group).label.toLowerCase()} group, and nobody is in it.
+              <div style={{ marginTop: 10 }}>
+                <button className="btn pri" onClick={() => go("staff")}>
+                  Add somebody
+                </button>
+              </div>
+            </Empty>
+          ) : (
+            <div className="rider-grid">
+              {people.map((p) => (
+                <JobPerson
+                  key={p.id}
+                  person={p}
+                  kind={kind}
+                  job={jobs.find((j) => j.kind === kind && j.staffId === p.id)}
+                  jobs={jobs}
+                  held={held}
+                  onPlace={onPlace}
+                />
+              ))}
+            </div>
+          )}
+        </Card>
       )}
-    </Card>
+    </div>
   );
 }
 
-function JobCard({ job, held, onDrop }) {
+/* ------------------------------ standing rounds ---------------------------- */
+
+/**
+ * Mucking out and feeding are not assigned one horse at a time.
+ *
+ * A groom is given a run of boxes and keeps it — the work belongs to the box,
+ * not to whatever is standing in it this week. So these two kinds get a
+ * different panel: a person, the boxes they keep, and how far through them
+ * they are, live off the taps on the stall screens.
+ */
+function RoundsPanel({ kind, people }) {
   const { world, now, actions } = useWorld();
-  const kind = jobKind(job.kind);
-  const people = kind.group === "all" ? world.staff || [] : staffIn(world.staff, kind.group);
-  const horses = (job.animalIds || []).map((id) => world.animals.find((a) => a.id === id)).filter(Boolean);
-  const person = (world.staff || []).find((p) => p.id === job.staffId);
+  const mine = useMemo(() => stallsOfYard(world).filter((st) => st.animalId !== undefined), [world]);
+  const spec = roundKind(kind);
+  const yardId = currentYard(world)?.id;
+  const rounds = roundsOf(world, kind, yardId).filter((r) => people.some((p) => p.id === r.staffId));
+  const [picking, setPicking] = useState(null);
+
+  const free = unassigned(world, kind, mine.filter((st) => st.animalId));
+  const totals = rounds.reduce(
+    (acc, r) => {
+      const pr = roundProgress(world, r, now);
+      acc.boxes += pr.boxes;
+      acc.done += pr.done;
+      acc.behind += pr.behind;
+      return acc;
+    },
+    { boxes: 0, done: 0, behind: 0 }
+  );
+  const other = kind === "muckout" ? "feed" : "muckout";
+
+  return (
+    <div className="grid" style={{ gap: 0 }}>
+      <Card
+        title={`${spec.label} rounds`}
+        sub={
+          totals.boxes
+            ? `${totals.done} of ${totals.boxes} boxes done so far today${totals.behind ? ` · ${totals.behind} behind` : ""}`
+            : "Nobody has been given any boxes yet"
+        }
+        right={
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              className="btn sm"
+              title={`Give the ${roundKind(other).label.toLowerCase()} rounds the same boxes`}
+              onClick={() => actions.copyRounds(kind, other)}
+            >
+              <Icon name="grid" size={14} /> Copy to {roundKind(other).label.toLowerCase()}
+            </button>
+          </div>
+        }
+      >
+        {free.length > 0 && (
+          <div className="hint" style={{ marginBottom: 10 }}>
+            <b>{free.length}</b> occupied box{free.length === 1 ? " has" : "es have"} nobody down to{" "}
+            {spec.label.toLowerCase()} — give them to somebody below.
+          </div>
+        )}
+
+        <div className="round-grid">
+          {people.map((p) => {
+            const round = roundFor(world, kind, p.id, yardId);
+            const pr = round ? roundProgress(world, round, now) : null;
+            return (
+              <div key={p.id} className={`round-card ${round?.stallIds?.length ? "filled" : ""}`}>
+                <div className="rc-hd">
+                  <ScrollName className="rc-nm">{p.name}</ScrollName>
+                  {pr?.boxes ? (
+                    <Pill tone={pr.tone}>
+                      {pr.done}/{pr.boxes}
+                    </Pill>
+                  ) : null}
+                </div>
+
+                {round?.stallIds?.length ? (
+                  <>
+                    <ScrollName className="tiny mute">{describeRound(world, round)}</ScrollName>
+                    <div className="round-bar" title={`${pr.pct}% of the boxes are up to date`}>
+                      <span className={pr.tone} style={{ width: `${pr.pct}%` }} />
+                    </div>
+                    <div className="tiny mute">
+                      {pr.behind ? `${pr.behind} box${pr.behind === 1 ? "" : "es"} behind` : "All up to date"}
+                      {pr.empty ? ` · ${pr.empty} empty` : ""}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rc-slot">No boxes yet</div>
+                )}
+
+                <div className="row" style={{ gap: 6 }}>
+                  <input
+                    className="inp sm nums"
+                    style={{ width: 88 }}
+                    type="time"
+                    title="What time they start"
+                    value={round?.at || ""}
+                    onChange={(e) => actions.setRound(kind, p.id, { at: e.target.value })}
+                  />
+                  <button className="btn sm grow" onClick={() => setPicking(p)}>
+                    <Icon name="barn" size={13} /> {round?.stallIds?.length ? "Change boxes" : "Give boxes"}
+                  </button>
+                  {round?.stallIds?.length ? (
+                    <button className="icon-btn sm" title="Clear this round" onClick={() => actions.clearRound(kind, p.id)}>
+                      <Icon name="trash" size={13} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {picking && <BoxPicker kind={kind} person={picking} stalls={mine} onClose={() => setPicking(null)} />}
+    </div>
+  );
+}
+
+/**
+ * Choosing the boxes, a barn at a time.
+ *
+ * Nobody is given eight boxes scattered over three barns, so the picker is
+ * grouped by barn with a whole-barn tick, and it opens by offering the run it
+ * would have suggested anyway — the biggest block nobody has yet.
+ */
+function BoxPicker({ kind, person, stalls, onClose }) {
+  const { world, now, actions } = useWorld();
+  const round = roundFor(world, kind, person.id, currentYard(world)?.id);
+  const spec = roundKind(kind);
+  const [picked, setPicked] = useState(() => new Set(round?.stallIds || []));
+
+  const byBarn = useMemo(() => {
+    const m = new Map();
+    stalls.forEach((st) => m.set(st.barnId, [...(m.get(st.barnId) || []), st]));
+    return [...m.entries()].map(([barnId, list]) => ({
+      barn: world.barns.find((b) => b.id === barnId),
+      stalls: list.sort((a, b) => a.index - b.index),
+    }));
+  }, [stalls, world.barns]);
+
+  const suggestion = useMemo(
+    () => suggestRun(world, kind, stalls.filter((st) => st.animalId), 10),
+    [world, kind, stalls]
+  );
+
+  const toggle = (id) =>
+    setPicked((p) => {
+      const next = new Set(p);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const occupied = [...picked].filter((id) => stalls.find((st) => st.id === id)?.animalId).length;
+
+  return (
+    <Modal
+      title={`${person.name} — ${spec.label.toLowerCase()}`}
+      wide
+      onClose={onClose}
+      footer={
+        <>
+          <span className="small mute" style={{ marginRight: "auto" }}>
+            {picked.size} box{picked.size === 1 ? "" : "es"} · {occupied} with a horse in
+          </span>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn pri"
+            onClick={() => {
+              actions.setRound(kind, person.id, { stallIds: [...picked], at: round?.at || spec.at });
+              onClose();
+            }}
+          >
+            <Icon name="check" size={15} /> Save the round
+          </button>
+        </>
+      }
+    >
+      <div className="grid" style={{ gap: 12 }}>
+        {suggestion.length > 0 && !round?.stallIds?.length && (
+          <div className="hint row" style={{ gap: 10, flexWrap: "wrap" }}>
+            <span>
+              The biggest run nobody has is <b>{suggestion.length} boxes</b> in{" "}
+              <b>{world.barns.find((b) => b.id === suggestion[0].barnId)?.name}</b>.
+            </span>
+            <button className="btn sm pri" onClick={() => setPicked(new Set(suggestion.map((st) => st.id)))}>
+              Take those
+            </button>
+          </div>
+        )}
+
+        {byBarn.map(({ barn, stalls: list }) => {
+          const all = list.every((st) => picked.has(st.id));
+          return (
+            <div key={barn?.id} className="pick-barn">
+              <div className="pick-hd">
+                <b>{barn?.name}</b>
+                <span className="tiny mute">{list.filter((st) => st.animalId).length} with a horse in</span>
+                <button
+                  className="btn sm"
+                  onClick={() =>
+                    setPicked((p) => {
+                      const next = new Set(p);
+                      list.forEach((st) => (all ? next.delete(st.id) : next.add(st.id)));
+                      return next;
+                    })
+                  }
+                >
+                  {all ? "None" : "All of it"}
+                </button>
+              </div>
+              <div className="pick-boxes">
+                {list.map((st) => {
+                  const taken = roundOfStall(world, kind, st.id);
+                  const mineAlready = taken && taken.staffId === person.id;
+                  const animal = st.animalId ? world.animals.find((a) => a.id === st.animalId) : null;
+                  const due = stallDue(world, st, kind, now);
+                  const who = taken && !mineAlready ? world.staff.find((p) => p.id === taken.staffId) : null;
+                  return (
+                    <button
+                      key={st.id}
+                      className={`pick-box ${picked.has(st.id) ? "on" : ""} ${animal ? "" : "empty"} ${who ? "taken" : ""}`}
+                      title={
+                        who
+                          ? `${st.name} — ${who.name} has this one`
+                          : animal
+                          ? `${st.name} — ${animal.name}${due?.behind ? ` · ${due.behind} behind` : ""}`
+                          : `${st.name} — empty`
+                      }
+                      onClick={() => toggle(st.id)}
+                    >
+                      <b>{st.index}</b>
+                      <span className="pick-nm">{animal ? animal.name : "Empty"}</span>
+                      {due?.behind ? <i className="pick-late" /> : null}
+                      {who && <span className="pick-who">{who.name.split(" ")[0]}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        <div className="hint">
+          Boxes already on somebody else's round are marked with their name — taking one moves it.
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** One person, and the horses they have for this job. */
+function JobPerson({ person, kind, job, jobs, held, onPlace }) {
+  const { world, now, actions } = useWorld();
+  const horses = ((job && job.animalIds) || []).map((id) => world.animals.find((a) => a.id === id)).filter(Boolean);
+  // how much this person has on across every job today, as the rider cards show
+  const all = jobs.reduce((n, j) => n + (j.staffId === person.id ? (j.animalIds || []).length : 0), 0);
 
   return (
     <div
-      className={`job-card ${held ? "target" : ""} ${job.staffId ? "filled" : ""}`}
-      style={{ "--kind": kind.colour }}
+      className={`rider-card ${horses.length ? "filled" : ""} ${held ? "target" : ""}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
-        onDrop(job.id, e.dataTransfer.getData("text/animal"));
+        onPlace(person.id, e.dataTransfer.getData("text/animal"));
       }}
-      onClick={() => held && onDrop(job.id, held.id)}
+      onClick={() => held && onPlace(person.id, held.id)}
     >
-      <div className="jc-hd">
-        <span className="jc-ico">
-          <Icon name={kind.icon} size={15} />
-        </span>
-        <select
-          className="sel sm"
-          value={job.kind}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => actions.updateJob(now, job.id, { kind: e.target.value, staffId: null })}
-        >
-          {JOB_KINDS.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.label}
-            </option>
-          ))}
-        </select>
-        <input
-          className="inp sm nums"
-          style={{ width: 92 }}
-          type="time"
-          value={job.at || ""}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => actions.updateJob(now, job.id, { at: e.target.value })}
-        />
-        <button
-          className="icon-btn sm"
-          title="Remove this job"
-          onClick={(e) => {
-            e.stopPropagation();
-            actions.removeJob(now, job.id);
-          }}
-        >
-          <Icon name="trash" size={13} />
-        </button>
-      </div>
-
-      {job.kind === "other" && (
-        <input
-          className="inp sm"
-          placeholder="What is it?"
-          value={job.label || ""}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => actions.updateJob(now, job.id, { label: e.target.value })}
-        />
-      )}
-
-      <select
-        className="sel sm"
-        value={job.staffId || ""}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => actions.updateJob(now, job.id, { staffId: e.target.value || null })}
-      >
-        <option value="">Nobody assigned</option>
-        {people.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-      {!people.length && (
-        <div className="tiny mute">Nobody is in the {groupOf(kind.group).label.toLowerCase()} group yet.</div>
-      )}
-
-      <div className="jc-horses">
-        {horses.map((a) => (
-          <span key={a.id} className="jc-horse">
-            <Silks animal={a} size={18} />
-            <ScrollName>{a.name}</ScrollName>
-            <button
-              className="icon-btn sm"
-              title="Take this horse off"
-              onClick={(e) => {
-                e.stopPropagation();
-                actions.toggleJobAnimal(now, job.id, a.id);
-              }}
-            >
-              <Icon name="close" size={11} />
-            </button>
-          </span>
-        ))}
-        <span className="jc-drop">
-          {held ? `Tap to add ${held.name}` : horses.length ? "Drop another horse here" : "Drop the horses here"}
+      <div className="rc-hd">
+        <ScrollName className="rc-nm">{person.name}</ScrollName>
+        <span className="rc-lots nums" title={`${all} horses today across every job`}>
+          {all}
         </span>
       </div>
 
-      <input
-        className="inp sm"
-        placeholder="Anything to say about it"
-        value={job.note || ""}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => actions.updateJob(now, job.id, { note: e.target.value })}
-      />
-      {person && (
-        <div className="tiny mute">
-          {person.phone} · {horses.length} horse{horses.length === 1 ? "" : "s"}
-        </div>
+      {horses.length ? (
+        <>
+          <div className="jc-horses tight">
+            {horses.map((a) => (
+              <span key={a.id} className="jc-horse">
+                <Silks animal={a} size={18} />
+                <ScrollName>{a.name}</ScrollName>
+                <button
+                  className="icon-btn sm"
+                  title={`Take ${a.name} off`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    actions.unassignJob(now, job.id, a.id);
+                  }}
+                >
+                  <Icon name="close" size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="row" style={{ gap: 6 }} onClick={(e) => e.stopPropagation()}>
+            <input
+              className="inp sm nums"
+              style={{ width: 92 }}
+              type="time"
+              value={job.at || ""}
+              title="What time"
+              onChange={(e) => actions.updateJob(now, job.id, { at: e.target.value })}
+            />
+            {kind === "other" && (
+              <input
+                className="inp sm"
+                placeholder="What is it?"
+                value={job.label || ""}
+                onChange={(e) => actions.updateJob(now, job.id, { label: e.target.value })}
+              />
+            )}
+            <input
+              className="inp sm"
+              placeholder="Anything to say"
+              value={job.note || ""}
+              onChange={(e) => actions.updateJob(now, job.id, { note: e.target.value })}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="rc-slot">{held ? `Tap to put ${held.name} down` : "Drop a horse here"}</div>
       )}
     </div>
   );

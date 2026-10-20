@@ -1286,3 +1286,66 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .style-shot canvas { display: block; width: 100%; height: auto; }
 .style-hd { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 800; margin-top: 5px; }
 .style-hint { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+
+/* which job the people grid is for — the jobs answer to the lot tabs */
+.kind-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.kind-tab {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12.5px; font-weight: 700; color: var(--ink-2);
+  background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 10px;
+}
+.kind-tab svg { color: var(--kind, var(--ink-2)); }
+.kind-tab:hover { border-color: var(--blue-300); }
+.kind-tab.on {
+  color: #fff; background: var(--kind, var(--blue)); border-color: var(--kind, var(--blue));
+}
+.kind-tab.on svg { color: #fff; }
+.kind-n {
+  font-size: 11px; font-weight: 800; background: var(--plane); color: var(--ink-2);
+  border-radius: 20px; padding: 0 6px;
+}
+.kind-tab.on .kind-n { background: rgba(255, 255, 255, 0.26); color: #fff; }
+.jc-horses.tight { border: 0; padding: 0; min-height: 0; }
+
+/* ------------------------- standing rounds and boxes ---------------------- */
+
+.round-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 10px; }
+.round-card {
+  display: flex; flex-direction: column; gap: 6px; min-height: 120px;
+  border: 1px solid var(--line); border-radius: 11px; padding: 9px 10px 10px; background: #fff;
+}
+.round-card.filled { border-color: var(--blue-100); background: #fbfdff; }
+.round-card .grow { flex: 1; }
+/* how far through the boxes they are, straight off the taps on the screens */
+.round-bar { height: 8px; border-radius: 6px; background: var(--plane); overflow: hidden; }
+.round-bar span { display: block; height: 100%; border-radius: 6px; background: var(--blue); transition: width 0.3s; }
+.round-bar span.good { background: #1baf7a; }
+.round-bar span.warning { background: #e8b53c; }
+.round-bar span.serious { background: #e87a3c; }
+.round-bar span.flat { background: var(--blue-300); }
+
+/* choosing the boxes, a barn at a time */
+.pick-barn { border: 1px solid var(--line); border-radius: 11px; padding: 9px 10px 11px; }
+.pick-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pick-hd .btn { margin-left: auto; }
+.pick-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.pick-box {
+  position: relative; display: grid; gap: 1px; text-align: left; cursor: pointer; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 9px; padding: 5px 8px 6px; background: #fff;
+}
+.pick-box b { font-size: 12px; }
+.pick-nm { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-box.empty { background: var(--plane); }
+.pick-box.on { border-color: var(--blue); background: var(--blue-50); box-shadow: inset 0 0 0 1px var(--blue); }
+.pick-box.taken { border-style: dashed; }
+.pick-who {
+  font-size: 10px; font-weight: 700; color: var(--blue-600);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* a box that is behind on its rounds, so a manager can see where to put help */
+.pick-late { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #e87a3c; }
+
+/* how far through its boxes a barn is, on the barn tile */
+.bc-rounds { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 2px; }
+.bc-round { display: flex; align-items: center; gap: 6px; flex: 1 1 110px; min-width: 0; font-size: 12px; }
+.bc-round .round-bar { flex: 1; min-width: 34px; height: 6px; }

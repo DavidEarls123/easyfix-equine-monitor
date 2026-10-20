@@ -16,7 +16,7 @@ import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
 
 
-export const VERSION = 12;
+export const VERSION = 13;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -302,6 +302,7 @@ export function seedWorld() {
     alertState: {},
     careLog: [],
     staff: [],
+    rounds: [],
     ridePlan: {},
     messages: [],
     seenNotifications: {},
@@ -523,15 +524,51 @@ function seedPlan(world) {
     });
   });
 
-  const boxes = mine.slice(0, 18).map((a) => a.id);
   plan.jobs = [
-    { id: "jb_seed_1", kind: "muckout", staffId: hands[0]?.id || null, at: "06:30", animalIds: boxes.slice(0, 9), note: "Barn 1 and the top of Barn 2" },
-    { id: "jb_seed_2", kind: "muckout", staffId: hands[1]?.id || null, at: "06:30", animalIds: boxes.slice(9, 18), note: "" },
     { id: "jb_seed_3", kind: "farrier", staffId: farrier?.id || null, at: "10:00", animalIds: mine.slice(2, 5).map((a) => a.id), note: "Front shoes, bring the travelling box in" },
     { id: "jb_seed_4", kind: "vet", staffId: vet?.id || null, at: "09:00", animalIds: mine.slice(2, 3).map((a) => a.id), note: "Scope before any hard feed" },
   ];
 
   world.ridePlan = { [planKey(yard.id, Date.now())]: plan };
+  return seedRounds(world, hands);
+}
+
+/**
+ * The standing rounds. A yard splits its boxes between the grooms a barn at a
+ * time and leaves it that way, so the demo opens with the boxes already
+ * divided up rather than with nobody doing anything.
+ */
+function seedRounds(world, hands) {
+  const rounds = [];
+  let i = 0;
+  world.barns
+    .filter((b) => b.configured)
+    .forEach((barn) => {
+      const stalls = world.stalls
+        .filter((st) => st.barnId === barn.id)
+        .sort((a, b) => a.index - b.index);
+      // a barn is split between no more than two people, in runs
+      const parts = stalls.length > 10 ? 2 : 1;
+      const size = Math.ceil(stalls.length / parts);
+      for (let p = 0; p < parts; p++) {
+        const person = hands[i++ % Math.max(1, hands.length)];
+        if (!person) return;
+        const mine = stalls.slice(p * size, (p + 1) * size);
+        if (!mine.length) continue;
+        ["muckout", "feed"].forEach((kind) =>
+          rounds.push({
+            id: `rd_seed_${kind}${rounds.length}`,
+            kind,
+            staffId: person.id,
+            yardId: barn.yardId,
+            stallIds: mine.map((st) => st.id),
+            at: kind === "muckout" ? "06:30" : "07:00",
+            note: "",
+          })
+        );
+      }
+    });
+  world.rounds = rounds;
   return world;
 }
 

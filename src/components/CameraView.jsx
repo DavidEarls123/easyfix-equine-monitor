@@ -317,73 +317,89 @@ function drawDrinker(ctx, P, x, y) {
  * on y = 0 and the withers are about 160 above them.
  */
 
-/** A leg as a chain of tapering segments — the joints are what sell it. */
-function drawLeg(ctx, colour, pts, widths) {
-  ctx.strokeStyle = colour;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  for (let i = 0; i < pts.length - 1; i++) {
-    ctx.lineWidth = widths[i];
-    ctx.beginPath();
-    ctx.moveTo(pts[i][0], pts[i][1]);
-    ctx.lineTo(pts[i + 1][0], pts[i + 1][1]);
-    ctx.stroke();
+/**
+ * A limb as a filled shape that tapers between joints.
+ *
+ * A stroke of constant width gives a stick. A real foreleg is a forearm two
+ * and a half times the width of the cannon below the knee, and a hind leg is a
+ * gaskin wider still — the taper is most of what makes a leg read as a leg.
+ */
+function limb(ctx, colour, pts, widths) {
+  const left = [];
+  const right = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [x, y] = pts[i];
+    const [px, py] = pts[Math.max(0, i - 1)];
+    const [qx, qy] = pts[Math.min(pts.length - 1, i + 1)];
+    const dx = qx - px;
+    const dy = qy - py;
+    const len = Math.hypot(dx, dy) || 1;
+    const ox = (-dy / len) * (widths[i] / 2);
+    const oy = (dx / len) * (widths[i] / 2);
+    left.push([x + ox, y + oy]);
+    right.push([x - ox, y - oy]);
   }
-  const [hx, hy] = pts[pts.length - 1];
   ctx.fillStyle = colour;
   ctx.beginPath();
-  ctx.moveTo(hx - 6.5, hy - 9);
-  ctx.lineTo(hx + 6.5, hy - 9);
-  ctx.lineTo(hx + 7.5, hy);
-  ctx.lineTo(hx - 7.5, hy);
+  ctx.moveTo(left[0][0], left[0][1]);
+  left.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
+  right
+    .slice()
+    .reverse()
+    .forEach(([x, y]) => ctx.lineTo(x, y));
+  ctx.closePath();
+  ctx.fill();
+  // an edge, so a leg in the horse's own colour does not melt into the barrel
+  ctx.strokeStyle = "rgba(0,0,0,0.22)";
+  ctx.lineWidth = 1.6;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+}
+
+function hoof(ctx, colour, x, y, w = 9) {
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.72, y - 10);
+  ctx.lineTo(x + w * 0.72, y - 10);
+  ctx.lineTo(x + w * 0.86, y);
+  ctx.lineTo(x - w * 0.86, y);
   ctx.closePath();
   ctx.fill();
 }
 
-/** The near foreleg: shoulder, knee, cannon, fetlock, hoof — straight down. */
-function foreleg(ctx, colour, x, swing, lift, scale = 1) {
-  const w = 13 * scale;
-  drawLeg(
-    ctx,
-    colour,
-    [
-      [x, -84 + lift],
-      [x + swing * 0.3, -46],
-      [x + swing * 0.8, -16],
-      [x + swing, 0],
-    ],
-    [w, w * 0.72, w * 0.62]
-  );
+/**
+ * The near foreleg. Above the knee it is the horse's own colour, because on a
+ * bay the black stops at the knee — drawing the whole leg dark is the single
+ * thing that makes these read as sticks rather than limbs.
+ */
+function foreleg(ctx, coatColour, pointColour, x, swing, lift, k = 1) {
+  const knee = [x + swing * 0.35, -44];
+  limb(ctx, coatColour, [[x - 2, -84 + lift], [x + swing * 0.16, -66], knee], [24 * k, 18 * k, 12 * k]);
+  limb(ctx, pointColour, [knee, [x + swing * 0.78, -14], [x + swing, -2]], [13 * k, 8.6 * k, 9 * k]);
+  hoof(ctx, pointColour, x + swing, 0, 9 * k);
 }
 
-/** The hind leg: the hock sits behind the stifle, which is the whole tell. */
-function hindleg(ctx, colour, x, swing, lift, scale = 1) {
-  const w = 15 * scale;
-  drawLeg(
-    ctx,
-    colour,
-    [
-      [x - 6, -88 + lift],
-      [x + 14, -50],
-      [x + 4 + swing * 0.7, -16],
-      [x + swing, 0],
-    ],
-    [w, w * 0.6, w * 0.55]
-  );
+/** The hind leg: a deep gaskin, and the hock set back behind the stifle. */
+function hindleg(ctx, coatColour, pointColour, x, swing, lift, k = 1) {
+  const hock = [x + 17, -48];
+  limb(ctx, coatColour, [[x - 8, -92 + lift], [x + 8, -68], hock], [34 * k, 25 * k, 13 * k]);
+  limb(ctx, pointColour, [hock, [x + 4 + swing * 0.6, -14], [x + swing, -2]], [14 * k, 8.6 * k, 9 * k]);
+  hoof(ctx, pointColour, x + swing, 0, 9 * k);
 }
 
 /** The outline of a standing horse, closed, ready to fill or clip. */
 function bodyPath(ctx, lift) {
+  const L = lift;
   ctx.beginPath();
-  ctx.moveTo(-90, -112 + lift); // point of shoulder
-  ctx.bezierCurveTo(-94, -138 + lift, -74, -158 + lift, -46, -158 + lift); // up to the withers
-  ctx.bezierCurveTo(-12, -156 + lift, 16, -148 + lift, 40, -150 + lift); // the back, dipped
-  ctx.bezierCurveTo(62, -152 + lift, 86, -154 + lift, 100, -138 + lift); // over the croup
-  ctx.bezierCurveTo(112, -124 + lift, 112, -100 + lift, 100, -82 + lift); // point of buttock
-  ctx.bezierCurveTo(92, -70 + lift, 74, -68 + lift, 54, -74 + lift); // the flank, tucked up
-  ctx.bezierCurveTo(26, -70 + lift, -2, -66 + lift, -28, -68 + lift); // belly, deepest behind the girth
-  ctx.bezierCurveTo(-48, -70 + lift, -62, -76 + lift, -72, -88 + lift); // elbow
-  ctx.bezierCurveTo(-82, -96 + lift, -88, -102 + lift, -90, -112 + lift);
+  ctx.moveTo(-84, -116 + L); // point of shoulder
+  ctx.bezierCurveTo(-88, -142 + L, -70, -160 + L, -44, -161 + L); // the wither, the highest point
+  ctx.bezierCurveTo(-14, -159 + L, 16, -153 + L, 44, -153 + L); // a level back
+  ctx.bezierCurveTo(68, -154 + L, 86, -149 + L, 95, -133 + L); // over a rounded croup
+  ctx.bezierCurveTo(103, -117 + L, 100, -95 + L, 91, -81 + L); // the point of buttock
+  ctx.bezierCurveTo(84, -71 + L, 66, -68 + L, 48, -72 + L); // the flank
+  ctx.bezierCurveTo(22, -70 + L, -4, -66 + L, -26, -66 + L); // the belly, deepest behind the girth
+  ctx.bezierCurveTo(-46, -67 + L, -60, -75 + L, -70, -89 + L); // the elbow
+  ctx.bezierCurveTo(-78, -97 + L, -83, -106 + L, -84, -116 + L);
   ctx.closePath();
 }
 
@@ -538,19 +554,20 @@ function paintHorse(ctx, P, coat, pose, night, style) {
   /* A horse stands about as tall under the belly as it is deep through the
      barrel. The body was sitting too low for that, which is what made it read
      short-legged, so it is lifted and the legs run the extra distance. */
-  const lift = breathe - 22;
-  const hy = headY - 22;
+  const lift = breathe - 30;
+  const hy = headY - 30;
   /* head and neck together are about as long as the body. The pose says where
      the horse is looking; these put the head the right distance out in front
      and carry it nose-down, which is how a horse stands when nothing is
      happening. Behaviour poses add their own turn on top. */
-  const hx = headX - 20;
+  const hx = headX + 26;
   const carriage = down ? 0 : -0.16;
 
   // off-side legs first, darker, so the near pair reads in front of them
-  const off = shade(points, 0.74);
-  foreleg(ctx, off, -58, Math.sin(legPhase + 2.1) * 7, lift, 0.9);
-  hindleg(ctx, off, 78, Math.sin(legPhase + 1.2) * 6, lift, 0.9);
+  const offCoat = shade(mid, 0.72);
+  const offPoint = shade(points, 0.74);
+  foreleg(ctx, offCoat, offPoint, -48, Math.sin(legPhase + 2.1) * 7, lift, 0.9);
+  hindleg(ctx, offCoat, offPoint, 82, Math.sin(legPhase + 1.2) * 6, lift, 0.9);
 
   // the barrel
   ctx.fillStyle = body;
@@ -588,8 +605,8 @@ function paintHorse(ctx, P, coat, pose, night, style) {
   ctx.fill();
 
   // near-side legs
-  foreleg(ctx, points, -70, Math.sin(legPhase) * 9, lift - (lame ? 7 : 0));
-  hindleg(ctx, points, 66, Math.sin(legPhase + 3.1) * 8, lift);
+  foreleg(ctx, mid, points, -62, Math.sin(legPhase) * 9, lift - (lame ? 7 : 0));
+  hindleg(ctx, mid, points, 70, Math.sin(legPhase + 3.1) * 8, lift);
 
   // mane: one shape laid along the crest and falling on the near side, from
   // the withers to the poll and no further back

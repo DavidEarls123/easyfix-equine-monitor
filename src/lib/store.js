@@ -258,6 +258,101 @@ export function WorldProvider({ children }) {
         });
       },
 
+      /**
+       * Put a horse down for a job with a person, the way a horse is put under
+       * a rider: one gesture, no form. The job for that person and that kind
+       * is made if it does not exist yet, and cleared away again when the last
+       * horse comes off it, so the plan never fills with empty cards.
+       */
+      assignJob(when, kind, staffId, animalId, at) {
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
+          const jobs = [...(plan.jobs || [])];
+          let job = jobs.find((j) => j.kind === kind && j.staffId === staffId);
+          if (!job) {
+            job = { id: uid("jb_"), kind, staffId, at: at || "", animalIds: [], note: "" };
+            jobs.push(job);
+          }
+          if (!(job.animalIds || []).includes(animalId))
+            jobs[jobs.indexOf(job)] = { ...job, animalIds: [...(job.animalIds || []), animalId] };
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, jobs } };
+          return w;
+        });
+      },
+      /** Take a horse off a job, and drop the job if that was the last one. */
+      unassignJob(when, jobId, animalId) {
+        edit((w) => {
+          const [key, plan] = openPlan(w, when);
+          const jobs = (plan.jobs || [])
+            .map((j) => (j.id === jobId ? { ...j, animalIds: (j.animalIds || []).filter((x) => x !== animalId) } : j))
+            .filter((j) => j.id !== jobId || (j.animalIds || []).length > 0 || j.note || j.at);
+          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, jobs } };
+          return w;
+        });
+      },
+
+      /* --------------------------------- rounds ----------------------------- */
+
+      /* A round is standing work — a run of boxes somebody keeps. It lives on
+         the world rather than in a day's plan, because it does not change
+         with the morning. */
+
+      setRound(kind, staffId, patch) {
+        edit((w) => {
+          const yardId = planYard(w)?.id;
+          const rounds = [...(w.rounds || [])];
+          const i = rounds.findIndex((r) => r.kind === kind && r.staffId === staffId && r.yardId === yardId);
+          if (i < 0) rounds.push({ id: uid("rd_"), kind, staffId, yardId, stallIds: [], at: "", note: "", ...patch });
+          else rounds[i] = { ...rounds[i], ...patch };
+          w.rounds = rounds;
+          return w;
+        });
+      },
+      /** Give up a round: the boxes go back to being unassigned. */
+      clearRound(kind, staffId) {
+        edit((w) => {
+          const yardId = planYard(w)?.id;
+          w.rounds = (w.rounds || []).filter(
+            (r) => !(r.kind === kind && r.staffId === staffId && r.yardId === yardId)
+          );
+          return w;
+        });
+        say("Round cleared");
+      },
+      /**
+       * The same boxes, for the other job. Mucking out and feeding are usually
+       * walked together, so a feeding round is nearly always a copy of the
+       * muck-out round rather than something assigned from scratch.
+       */
+      copyRounds(fromKind, toKind) {
+        let n = 0;
+        edit((w) => {
+          const yardId = planYard(w)?.id;
+          const from = (w.rounds || []).filter(
+            (r) => r.kind === fromKind && r.yardId === yardId && (r.stallIds || []).length
+          );
+          // only this yard's rounds of that kind are replaced
+          const rest = (w.rounds || []).filter((r) => !(r.kind === toKind && r.yardId === yardId));
+          w.rounds = [
+            ...rest,
+            ...from.map((r) => {
+              n++;
+              return {
+                id: uid("rd_"),
+                kind: toKind,
+                staffId: r.staffId,
+                yardId,
+                stallIds: [...r.stallIds],
+                at: "",
+                note: "",
+              };
+            }),
+          ];
+          return w;
+        });
+        say(n ? `Copied ${n} round${n === 1 ? "" : "s"}` : "Nothing to copy");
+      },
+
       /** The manager's marker that this day is settled. */
       markPlanSaved(when) {
         edit((w) => {

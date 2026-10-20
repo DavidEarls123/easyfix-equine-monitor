@@ -11,6 +11,7 @@ import LayoutEditor from "../components/LayoutEditor";
 import { C, Sparkline } from "../components/charts";
 import AddAnimal from "./AddAnimal";
 import { useWorld } from "../lib/store";
+import { ROUND_KINDS, barnRoundProgress } from "../lib/rounds";
 import { airStatus, tempStatus, waterStatus } from "../lib/status";
 import FrontOfBarn from "../components/FrontOfBarn";
 import Silks from "../components/Silks";
@@ -194,6 +195,10 @@ function Overview({ roll, alerts, now, snap, onAssign, onRename }) {
       </div>
 
       <div className="grid">
+        <Card title="Rounds today" sub="Mucking out and feeding, off the screens on the box fronts">
+          <BarnRounds barnId={roll.barn.id} />
+        </Card>
+
         <Card title="Water intake" pad>
           <div className="grid" style={{ gap: 10 }}>
             <Tile kind="water" label="Last 6 days" value={avg((x) => x.past.intakeL)} unit=" L" note="daily average per box" />
@@ -642,5 +647,56 @@ function BarnSettings({ barn, onClose, onEditLayout }) {
         )}
       </div>
     </Modal>
+  );
+}
+
+
+/* ----------------------------- the day's rounds ---------------------------- */
+
+/**
+ * How far through this barn the grooms are, and who is on it.
+ *
+ * Nobody reports this: it is the taps on the screen on the front of each box,
+ * counted up. A manager walking past the office wants the number, not a list.
+ */
+function BarnRounds({ barnId }) {
+  const { world, now } = useWorld();
+  const progress = barnRoundProgress(world, barnId, now);
+
+  return (
+    <div className="grid" style={{ gap: 11 }}>
+      {ROUND_KINDS.map((k) => {
+        const p = progress[k.id];
+        // whoever keeps boxes in this barn for this kind of work
+        const who = (world.rounds || [])
+          .filter(
+            (r) =>
+              r.kind === k.id &&
+              (r.stallIds || []).some((id) => world.stalls.find((st) => st.id === id)?.barnId === barnId)
+          )
+          .map((r) => world.staff.find((x) => x.id === r.staffId))
+          .filter(Boolean);
+        return (
+          <div key={k.id}>
+            <div className="row" style={{ gap: 8 }}>
+              <Icon name={k.icon} size={14} style={{ color: k.colour }} />
+              <b style={{ fontSize: 13 }}>{k.label}</b>
+              <Pill tone={p.tone}>
+                {p.done}/{p.boxes}
+              </Pill>
+              <span className="tiny mute" style={{ marginLeft: "auto" }}>
+                {p.behind ? `${p.behind} behind` : "up to date"}
+              </span>
+            </div>
+            <div className="round-bar" style={{ marginTop: 5 }}>
+              <span className={p.tone} style={{ width: `${p.pct}%` }} />
+            </div>
+            <div className="tiny mute" style={{ marginTop: 4 }}>
+              {who.length ? who.map((x) => x.name).join(", ") : "Nobody is down for these boxes"}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -57,15 +57,17 @@ export const DEFAULT_ACTIVITIES = [
 ];
 
 /** The work that is not ridden. `group` is the staff group offered first. */
+/* `at` is the hour that job usually happens, so a card starts with a sensible
+   time on it rather than blank. The manager changes it on the card. */
 export const JOB_KINDS = [
-  { id: "muckout", label: "Muck out", group: "yard", icon: "clean", colour: "#1baf7a" },
-  { id: "feed", label: "Feeding", group: "yard", icon: "feed", colour: "#4e9a4e" },
-  { id: "farrier", label: "Farrier", group: "farriers", icon: "hoof", colour: "#eb6834" },
-  { id: "vet", label: "Vet", group: "vets", icon: "vet", colour: "#d03b3b" },
-  { id: "dentist", label: "Dentist", group: "vets", icon: "vet", colour: "#b8456f" },
-  { id: "physio", label: "Physio", group: "vets", icon: "head", colour: "#8a6fd0" },
-  { id: "travel", label: "Travel / racing", group: "yard", icon: "right", colour: "#6b4bbd" },
-  { id: "other", label: "Other", group: "all", icon: "note", colour: "#45607a" },
+  { id: "muckout", label: "Muck out", group: "yard", icon: "clean", colour: "#1baf7a", at: "06:30" },
+  { id: "feed", label: "Feeding", group: "yard", icon: "feed", colour: "#4e9a4e", at: "07:00" },
+  { id: "farrier", label: "Farrier", group: "farriers", icon: "hoof", colour: "#eb6834", at: "10:00" },
+  { id: "vet", label: "Vet", group: "vets", icon: "vet", colour: "#d03b3b", at: "09:00" },
+  { id: "dentist", label: "Dentist", group: "vets", icon: "vet", colour: "#b8456f", at: "11:00" },
+  { id: "physio", label: "Physio", group: "vets", icon: "head", colour: "#8a6fd0", at: "11:30" },
+  { id: "travel", label: "Travel / racing", group: "yard", icon: "right", colour: "#6b4bbd", at: "06:00" },
+  { id: "other", label: "Other", group: "all", icon: "note", colour: "#45607a", at: "" },
 ];
 
 export const jobKind = (id) => JOB_KINDS.find((k) => k.id === id) || JOB_KINDS[JOB_KINDS.length - 1];
