@@ -157,13 +157,6 @@ export const REGISTRY_PROBLEMS = (() => {
 if (REGISTRY_PROBLEMS.length && typeof console !== "undefined")
   console.warn("Passport index:\n  " + REGISTRY_PROBLEMS.join("\n  "));
 
-/* A yearling is this year's crop: foaled last season, not yet in training.
-   They are kept apart because they live at the second yard. */
-export const YEARLING_FROM = "2025-01-01";
-export const isYearling = (rec) => rec.foaled >= YEARLING_FROM;
-export const YEARLINGS = REGISTRY.filter(isYearling);
-export const IN_TRAINING = REGISTRY.filter((r) => !isYearling(r));
-
 export const byName = (name) => REGISTRY.find((r) => r.name.toLowerCase() === String(name).toLowerCase());
 
 /** Free-text search over name, microchip, sire and dam — as the yard would use it. */

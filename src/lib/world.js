@@ -6,7 +6,7 @@
    which is what keeps a 300-stall yard cheap to hold in a browser.
    ========================================================================== */
 
-import { IN_TRAINING, YEARLINGS, byName } from "./registry";
+import { REGISTRY, byName } from "./registry";
 import { noise, between } from "./sim";
 import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
@@ -16,7 +16,7 @@ import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
 
 
-export const VERSION = 15;
+export const VERSION = 16;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -390,9 +390,8 @@ export function seedWorld() {
 
   /* How full the working barns are kept. A yard is not run at a hundred per
      cent: a box is always coming free as something goes out or comes back, and
-     a demo with every door shut has nowhere to put a horse. The first two
-     barns sit at nine tenths and whatever is left goes into the third, which
-     is where the spare room is. */
+     a demo with every door shut has nowhere to put a horse. All three working
+     barns sit at nine tenths, which is 47 of the 52 boxes. */
   const FULL = 0.9;
   const boxesIn = (barn) => stallsOf(world, barn.id).length;
   const takes = (barn) => Math.round(boxesIn(barn) * FULL);
@@ -421,10 +420,12 @@ export function seedWorld() {
     cash.seenAs = bright.id;
   }
 
-  // the rest of the boxes are filled from the horses in training, mostly
-  // settled. Anything from the Barn 1 list that did not fit stays in the pool.
+  /* The rest of the boxes are filled from the passport index, mostly settled.
+     The index is in order — the string in training first, then the made-up
+     horses — so the real ones go in before anything invented is reached for,
+     and whatever is not needed stays in the index to be imported later. */
   const housed = new Set(world.animals.map((a) => a.name));
-  const pool = IN_TRAINING.filter((r) => !housed.has(r.name));
+  const pool = REGISTRY.filter((r) => !housed.has(r.name));
   let p = 0;
   const fill = (barn, count, yardId) => {
     const stalls = stallsOf(world, barn.id)
@@ -443,21 +444,16 @@ export function seedWorld() {
       stalls[i].animalId = animal.id;
     }
   };
-  // Barn 1 is topped up past its named horses, then the next barn, and Barn 3
-  // takes whatever is left of the string — which is where the spare room is
+  // Barn 1 is topped up past its named horses, then the other two
   fill(b1, takes(b1) - stallsOf(world, b1.id).filter((st) => st.animalId).length, main.id);
   fill(b2, takes(b2), main.id);
-  fill(b3, Math.min(boxesIn(b3), pool.length - p), main.id);
+  fill(b3, takes(b3), main.id);
 
-  /* The second yard: this year's crop, being broken rather than trained. The
-     horses, their owners and their colours are all invented — it is a second
-     string to show the app handles one, not a real one. */
-  const y1 = addBarn("Barn 1", 16, true, hill.id);
+  /* The second yard is laid out and standing empty — this year's crop has not
+     come in yet. It is here to show the app handles a second yard, so it has
+     boxes to put horses in rather than horses in them. */
+  addBarn("Barn 1", 16, true, hill.id);
   addBarn("Barn 2", 0, false, hill.id);
-  p = 0;
-  pool.length = 0;
-  pool.push(...YEARLINGS);
-  fill(y1, takes(y1), hill.id);
 
   return seedPlan(seedStaff(seedCare(world)));
 }
@@ -622,7 +618,7 @@ function seedRounds(world, hands) {
   const rounds = [];
   let i = 0;
   world.barns
-    .filter((b) => b.configured)
+    .filter((b) => b.configured && world.stalls.some((st) => st.barnId === b.id && st.animalId))
     .forEach((barn) => {
       const stalls = world.stalls
         .filter((st) => st.barnId === barn.id)
