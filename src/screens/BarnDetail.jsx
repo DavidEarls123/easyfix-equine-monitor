@@ -370,7 +370,7 @@ function Stock({ roll, alerts, now, snap, onSet }) {
 
       <Card title="Why this matters">
         <p className="small mute" style={{ lineHeight: 1.7, marginTop: 0 }}>
-          A header tank that empties overnight looks exactly like eight horses going off their water at once. The barn's stock is held
+          A barn that runs short of water overnight looks exactly like eight horses going off their water at once. The barn's stock is held
           beside the sensor data so the two can be read together — when several boxes drop at the same time, the yard is pointed at the
           supply before it is pointed at the horses.
         </p>

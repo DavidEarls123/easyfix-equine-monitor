@@ -53,7 +53,7 @@ export function stallAlerts(world, st, now) {
         kind: "sensor",
         title: `No water data from ${stall.name}`,
         detail: `${where} — the flow meter has reported nothing today. Intake cannot be confirmed.`,
-        recommendation: "Check the meter's valve and battery. Water by bucket until it reads again.",
+        recommendation: "Check the meter on this box, and water by bucket until it reads again.",
         actions: [{ id: "openStall", label: "Open stall" }, { id: "openCamera", label: "Watch camera" }],
       })
     );
@@ -79,7 +79,7 @@ export function stallAlerts(world, st, now) {
             `That is ${deviation.pct}% of what it normally takes.`,
           recommendation: severe
             ? "Go and look at this horse now. Check the drinker works, then take a temperature and listen for gut sounds."
-            : "Check the drinker for airlocks and offer a fresh bucket at the next feed.",
+            : "Check the drinker is delivering, and offer a fresh bucket at the next feed.",
           actions: [{ id: "openAnimal", label: "Open profile" }, { id: "openCamera", label: "Watch camera" }],
         })
       );
@@ -140,7 +140,7 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `${animal.name} is behind on water`,
           detail: `${t.intakeL} L so far against ${t.expectedL} L expected by now — ${pct}% of the pace for a ${t.goal} L day (6-day average ${st.past.intakeL} L).`,
-          recommendation: "Check the drinker for airlocks and offer a fresh bucket at the next feed.",
+          recommendation: "Check the drinker is delivering, and offer a fresh bucket at the next feed.",
           actions: [{ id: "openAnimal", label: "Open profile" }],
         })
       );
@@ -170,7 +170,7 @@ export function stallAlerts(world, st, now) {
           kind: "temp",
           title: `${stall.name} is ${t.tempNow}°C`,
           detail: `${where} — ${Math.round(t.tempNow - s.tempMax)}°C above the comfort ceiling of ${s.tempMax}°C, peaking at ${t.tempMax}°C today.`,
-          recommendation: "Open the top door and the vents, put a second bucket in, and leave the rug off until it cools.",
+          recommendation: "Get more air through the box, put a second bucket in, and leave the rug off until it cools.",
           actions: [{ id: "openBarn", label: "Open barn" }],
         })
       );
@@ -211,7 +211,7 @@ export function stallAlerts(world, st, now) {
         kind: "air",
         title: `Air quality poor in ${stall.name}`,
         detail: `${where} — score ${t.airNow}%, ammonia ${t.nh3Now} ppm (limit ${s.nh3Max} ppm), humidity ${t.humidityNow}%.`,
-        recommendation: "Muck out fully rather than topping up, let the floor dry, and leave the top door open overnight.",
+        recommendation: "Muck out fully rather than topping up, let the floor dry, and get more air through overnight.",
         actions: [{ id: "openBarn", label: "Open barn" }],
       })
     );
@@ -386,7 +386,7 @@ export function barnAlerts(world, roll, now) {
         kind: "temp",
         title: `${b.name} is running hot`,
         detail: `${roll.tempC}°C average across ${roll.occupied} occupied boxes, ceiling ${s.tempMax}°C.`,
-        recommendation: "Open both ends of the barn and run the extraction through the afternoon.",
+        recommendation: "Get more air through the barn this afternoon.",
       })
     );
   if (roll.air < s.airMin)
@@ -412,7 +412,7 @@ export function barnAlerts(world, roll, now) {
         kind: "intake",
         title: `Water supply suspect in ${b.name}`,
         detail: `${dry.length} boxes are behind on intake at the same time — ${dry.map((x) => x.animal.name).slice(0, 4).join(", ")}${dry.length > 4 ? "…" : ""}.`,
-        recommendation: "Check the header tank and the pressure on this line before looking at the horses.",
+        recommendation: "Check the water supply to the barn before looking at the horses one by one.",
       })
     );
 
@@ -425,7 +425,7 @@ export function barnAlerts(world, roll, now) {
         kind: "stock",
         title: `Header tank at ${b.waterTankPct}% in ${b.name}`,
         detail: `About ${Math.max(1, Math.round((b.waterTankPct / 100) * 18))} hours of supply at the current draw.`,
-        recommendation: "Refill now and check the ballcock.",
+        recommendation: "Refill now, and find out why it is emptying.",
       })
     );
   if (b.feedDays < 4)
