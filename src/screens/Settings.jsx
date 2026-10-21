@@ -499,9 +499,9 @@ function BaselineEditor({ snap }) {
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {num("windowDays", "Look back (days)", "How far the learned normal reaches", 7, 90)}
+            {num("windowDays", "Look back (days)", "How far back it looks to learn what is normal", 7, 90)}
             {num("minDays", "Days before trusting it", "Until then the yard goal is used", 3, 30)}
-            {num("sensitivity", "Flag at (std devs)", "Lower catches more, and cries wolf more", 1, 4, 0.25)}
+            {num("sensitivity", "How far off before it flags", "Lower catches more, and cries wolf more", 1, 4, 0.25)}
           </div>
 
           <Switch
@@ -512,9 +512,9 @@ function BaselineEditor({ snap }) {
           {cfg.tempAdjust && num("tempPerDegree", "Extra intake expected (% per °C)", "Above the horse's own usual box temperature", 0, 15)}
 
           <div className="hint" style={{ lineHeight: 1.7 }}>
-            The baseline is a median and a median absolute deviation rather than a mean and a standard deviation, so one
-            bad day does not quietly raise the bar for the next one. Days when the meter was offline are left out
-            entirely rather than counted as zero.
+            Normal is taken from the middle of what a horse usually drinks, not the average, so one bad day does not
+            quietly raise the bar for the next one. Days when the meter was offline are left out rather than counted as
+            nothing.
           </div>
         </>
       )}

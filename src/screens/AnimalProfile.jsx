@@ -754,8 +754,8 @@ function Baseline({ baseline, dev, move, today }) {
           <span>{intake.lo} L</span>
           <span>
             {dev && !dev.tooEarly
-              ? `${today.intakeL} L so far · tracking ${dev.projected} L`
-              : `${today.intakeL} L so far · too early in the day to project`}
+              ? `${today.intakeL} L so far · on track for ${dev.projected} L`
+              : `${today.intakeL} L so far · too early in the day to say`}
           </span>
           <span>{intake.hi} L</span>
         </div>
@@ -768,7 +768,7 @@ function Baseline({ baseline, dev, move, today }) {
           {move && !move.tooEarly && (
             <span style={{ marginLeft: "auto" }}>
               <Pill tone={move.low ? "warning" : move.high ? "warning" : "good"}>
-                {move.projected} min projected · {move.verdict}
+                {move.projected} min today · {move.verdict}
               </Pill>
             </span>
           )}

@@ -53,7 +53,7 @@ export function stallAlerts(world, st, now) {
         kind: "sensor",
         title: `No water data from ${stall.name}`,
         detail: `${where} — the flow meter has reported nothing today. Intake cannot be confirmed.`,
-        recommendation: "Check the meter's isolation valve and battery, and water the horse by bucket until readings return.",
+        recommendation: "Check the meter's valve and battery. Water by bucket until it reads again.",
         actions: [{ id: "openStall", label: "Open stall" }, { id: "openCamera", label: "Watch camera" }],
       })
     );
@@ -73,13 +73,13 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `${animal.name} is drinking below its own normal`,
           detail:
-            `${t.intakeL} L so far, tracking about ${deviation.projected} L for the day. This horse normally drinks ` +
-            `${baseline.intake.median} L (usual range ${band}, learned over ${baseline.days} days)` +
-            `${deviation.adjusted ? `, and ${deviation.expected} L would be expected today for how warm the box is` : ""}. ` +
-            `That is ${Math.abs(deviation.z)} standard deviations below this horse — ${deviation.pct}% of what it should be drinking.`,
+            `${t.intakeL} L so far, on track for about ${deviation.projected} L today. This horse usually drinks ` +
+            `${baseline.intake.median} L a day (${band})` +
+            `${deviation.adjusted ? `, and the box is warm enough to expect ${deviation.expected} L` : ""}. ` +
+            `That is ${deviation.pct}% of what it normally takes.`,
           recommendation: severe
-            ? "Go and look at this horse. Check the drinker delivers, then take a temperature, gut sounds and droppings — a sharp drop against a horse's own baseline, rather than against a yard average, is the signal that usually comes before colic."
-            : "Check the drinker for airlocks and offer a fresh bucket at the next feed. This is a real change for this horse even though the litres look ordinary for the yard.",
+            ? "Go and look at this horse now. Check the drinker works, then take a temperature and listen for gut sounds."
+            : "Check the drinker for airlocks and offer a fresh bucket at the next feed.",
           actions: [{ id: "openAnimal", label: "Open profile" }, { id: "openCamera", label: "Watch camera" }],
         })
       );
@@ -92,10 +92,9 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `${animal.name} is drinking well above its own normal`,
           detail:
-            `Tracking about ${deviation.projected} L against a learned normal of ${baseline.intake.median} L ` +
-            `(usual range ${band}). ${deviation.pct}% of this horse's usual intake.`,
-          recommendation:
-            "Worth noting rather than acting on if the box is warm or the horse has worked. A sustained rise with weight loss is worth a vet's opinion.",
+            `On track for about ${deviation.projected} L today. This horse usually drinks ` +
+            `${baseline.intake.median} L (${band}) — so that is ${deviation.pct}% of normal.`,
+          recommendation: "Nothing to do if the box is warm or it has worked. Ask the vet if it keeps up.",
           actions: [{ id: "openAnimal", label: "Open profile" }],
         })
       );
@@ -110,7 +109,7 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `No drinking event for ${Math.floor(t.hoursSinceDrink)} h`,
           detail: `${where} — last measured draw ${t.lastDrinkAt ? new Date(t.lastDrinkAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "not today"}.`,
-          recommendation: "Confirm the drinker is delivering, then watch for gut sounds and droppings. Persistent refusal to drink is an early colic sign.",
+          recommendation: "Check the drinker works, then watch for gut sounds and droppings.",
           actions: [{ id: "openCamera", label: "Watch camera" }],
         })
       );
@@ -128,7 +127,7 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `${animal.name} is barely drinking`,
           detail: `${t.intakeL} L so far against ${t.expectedL} L expected by now — ${pct}% of the pace for a ${t.goal} L day, and a 6-day average of ${st.past.intakeL} L.`,
-          recommendation: "Check the drinker flows and the water is clean, then take a temperature and gut sounds. Call the vet if nothing has changed by the next feed.",
+          recommendation: "Check the drinker and the water, and take a temperature. Ring the vet if nothing changes by the next feed.",
           actions: [{ id: "openAnimal", label: "Open profile" }, { id: "openCamera", label: "Watch camera" }],
         })
       );
@@ -141,7 +140,7 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `${animal.name} is behind on water`,
           detail: `${t.intakeL} L so far against ${t.expectedL} L expected by now — ${pct}% of the pace for a ${t.goal} L day (6-day average ${st.past.intakeL} L).`,
-          recommendation: "Check the drinker for airlocks and offer a fresh bucket at the next feed. Worth a second look this evening.",
+          recommendation: "Check the drinker for airlocks and offer a fresh bucket at the next feed.",
           actions: [{ id: "openAnimal", label: "Open profile" }],
         })
       );
@@ -155,7 +154,7 @@ export function stallAlerts(world, st, now) {
           kind: "intake",
           title: `No drinking event for ${Math.floor(t.hoursSinceDrink)} h`,
           detail: `${where} — last measured draw ${t.lastDrinkAt ? new Date(t.lastDrinkAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "not today"}.`,
-          recommendation: "Confirm the drinker is delivering, then watch for gut sounds and droppings. Persistent refusal to drink is an early colic sign.",
+          recommendation: "Check the drinker works, then watch for gut sounds and droppings.",
           actions: [{ id: "openCamera", label: "Watch camera" }],
         })
       );
@@ -171,7 +170,7 @@ export function stallAlerts(world, st, now) {
           kind: "temp",
           title: `${stall.name} is ${t.tempNow}°C`,
           detail: `${where} — ${Math.round(t.tempNow - s.tempMax)}°C above the comfort ceiling of ${s.tempMax}°C, peaking at ${t.tempMax}°C today.`,
-          recommendation: "Open the top door and ridge vents, add a second water source, and hold off rugging until the box drops back under 25°C.",
+          recommendation: "Open the top door and the vents, put a second bucket in, and leave the rug off until it cools.",
           actions: [{ id: "openBarn", label: "Open barn" }],
         })
       );
@@ -184,7 +183,7 @@ export function stallAlerts(world, st, now) {
           kind: "temp",
           title: `${stall.name} above comfort range`,
           detail: `${where} — ${t.tempNow}°C against a ${s.tempMin}–${s.tempMax}°C band.`,
-          recommendation: "Increase ventilation on this side of the barn and check the horse is not over-rugged.",
+          recommendation: "Open up this side of the barn and check the horse is not over-rugged.",
           actions: [{ id: "openBarn", label: "Open barn" }],
         })
       );
@@ -197,7 +196,7 @@ export function stallAlerts(world, st, now) {
           kind: "temp",
           title: `${stall.name} is cold at ${t.tempNow}°C`,
           detail: `${where} — below the ${s.tempMin}°C floor. Overnight low ${t.tempMin}°C.`,
-          recommendation: "Check for a draught from the far door, add a rug, and confirm the horse is dry after work.",
+          recommendation: "Check for a draught from the far door, add a rug, and make sure the horse is dry.",
           actions: [{ id: "openBarn", label: "Open barn" }],
         })
       );
@@ -212,7 +211,7 @@ export function stallAlerts(world, st, now) {
         kind: "air",
         title: `Air quality poor in ${stall.name}`,
         detail: `${where} — score ${t.airNow}%, ammonia ${t.nh3Now} ppm (limit ${s.nh3Max} ppm), humidity ${t.humidityNow}%.`,
-        recommendation: "Muck out fully rather than deep-littering, lift the bedding off the floor to dry, and leave the top door open overnight.",
+        recommendation: "Muck out fully rather than topping up, let the floor dry, and leave the top door open overnight.",
         actions: [{ id: "openBarn", label: "Open barn" }],
       })
     );
@@ -225,7 +224,7 @@ export function stallAlerts(world, st, now) {
         kind: "air",
         title: `Air quality slipping in ${stall.name}`,
         detail: `${where} — score ${t.airNow}%, ammonia ${t.nh3Now} ppm.`,
-        recommendation: "Skip out again this evening and check the ventilation path is not blocked by stored bedding.",
+        recommendation: "Skip out again this evening and move anything blocking the vents.",
         actions: [{ id: "openBarn", label: "Open barn" }],
       })
     );
@@ -241,8 +240,8 @@ export function stallAlerts(world, st, now) {
         title: `Identity mismatch in ${stall.name}`,
         detail: `The camera recognises ${seen ? seen.name : "another horse"} in ${stall.name} at ${identity.conf}% confidence, but the app has ${animal.name} here.`,
         recommendation: seen
-          ? `If ${animal.name} and ${seen.name} were swapped over, update the stall assignment so the intake history follows the right horse.`
-          : "Confirm which horse is in the box and update the assignment.",
+          ? `If ${animal.name} and ${seen.name} were swapped over, update the boxes so the history follows the right horse.`
+          : "Check which horse is in the box and update it.",
         actions: seen
           ? [{ id: "swapStalls", label: `Swap with ${seen.name}` }, { id: "openCamera", label: "Watch camera" }]
           : [{ id: "openCamera", label: "Watch camera" }],
@@ -268,8 +267,8 @@ export function stallAlerts(world, st, now) {
         }`,
         recommendation:
           kind === "feed"
-            ? "Check the horse has actually been fed and the round simply was not pressed in — the record is what the yard is judged on."
-            : "Get the box done, and press it in on the stall screen so the record matches the building.",
+            ? "Check the horse was fed, then press it in on the box screen."
+            : "Get the box done and press it in on the box screen.",
         actions: [{ id: "openAnimal", label: "Open profile" }],
       })
     );
@@ -284,9 +283,8 @@ export function stallAlerts(world, st, now) {
         severity: "warning",
         kind: "camera",
         title: `${animal.name} is moving less than usual`,
-        detail: `About ${movement.projected} active minutes projected for the day against a learned normal of ${movement.expected}. ${Math.abs(movement.z)} standard deviations below this horse.`,
-        recommendation:
-          "A horse that goes quiet is often sore before it is lame. Trot it up in hand, feel for heat and a digital pulse, and check it is eating as well as standing.",
+        detail: `On track for about ${movement.projected} active minutes today. This horse usually does ${movement.expected}.`,
+        recommendation: "Trot it up in hand and feel the feet for heat. Check it is eating as well as standing.",
         actions: [{ id: "openCamera", label: "Watch camera" }, { id: "openAnimal", label: "Open profile" }],
       })
     );
@@ -307,8 +305,8 @@ export function stallAlerts(world, st, now) {
           title: colic ? `Possible colic — ${animal.name}` : `${worst.title} — ${animal.name}`,
           detail: `${worst.detail} at ${at}, ${worst.mins} min, ${worst.conf}% confidence.`,
           recommendation: colic
-            ? "Go to the box now. Check pulse, gut sounds and droppings, remove feed, and have the vet's number to hand — this pattern with falling water intake is the classic early colic picture."
-            : "Trot the horse up in hand on a hard surface and check for heat and digital pulse in the off fore before work tomorrow.",
+            ? "Go to the box now. Check pulse, gut sounds and droppings, take the feed away, and ring the vet."
+            : "Trot it up on a hard surface and feel the off fore for heat before work tomorrow.",
           actions: [{ id: "openCamera", label: "Review clip" }, { id: "openAnimal", label: "Open profile" }],
           at: worst.at,
         })
@@ -322,7 +320,7 @@ export function stallAlerts(world, st, now) {
           kind: "camera",
           title: `${animal.name} unsettled`,
           detail: `${restless.length} box-walking spells recorded today, ${restless.reduce((a, e) => a + e.mins, 0)} min in total.`,
-          recommendation: "Try more forage in front of the horse and a companion in sight; if it continues, review turnout and workload.",
+          recommendation: "Put more forage in front of it and keep a companion in sight. Look at its turnout if it keeps up.",
           actions: [{ id: "openCamera", label: "Watch camera" }],
         })
       );
@@ -371,7 +369,7 @@ export function barnAlerts(world, roll, now) {
         kind: "setup",
         title: `${b.name} is not laid out yet`,
         detail: "No stalls have been placed, so nothing in this barn is being monitored.",
-        recommendation: "Open the barn's layout editor and place the boxes to match the building.",
+        recommendation: "Open the layout editor and place the boxes to match the building.",
         actions: [{ id: "openLayout", label: "Set up layout" }],
       })
     );
@@ -388,7 +386,7 @@ export function barnAlerts(world, roll, now) {
         kind: "temp",
         title: `${b.name} is running hot`,
         detail: `${roll.tempC}°C average across ${roll.occupied} occupied boxes, ceiling ${s.tempMax}°C.`,
-        recommendation: "Open both ends of the barn and run the ridge extraction through the afternoon.",
+        recommendation: "Open both ends of the barn and run the extraction through the afternoon.",
       })
     );
   if (roll.air < s.airMin)
@@ -400,7 +398,7 @@ export function barnAlerts(world, roll, now) {
         kind: "air",
         title: `${b.name} air quality below target`,
         detail: `${roll.air}% average score, humidity ${roll.humidity}%.`,
-        recommendation: "Bring the muck-out forward and check the inlet vents at the low end are clear.",
+        recommendation: "Bring the muck-out forward and clear the vents at the low end.",
       })
     );
 
@@ -414,7 +412,7 @@ export function barnAlerts(world, roll, now) {
         kind: "intake",
         title: `Water supply suspect in ${b.name}`,
         detail: `${dry.length} boxes are behind on intake at the same time — ${dry.map((x) => x.animal.name).slice(0, 4).join(", ")}${dry.length > 4 ? "…" : ""}.`,
-        recommendation: "Check the header tank level and the pressure on this spur before treating these as individual horses.",
+        recommendation: "Check the header tank and the pressure on this line before looking at the horses.",
       })
     );
 
@@ -427,7 +425,7 @@ export function barnAlerts(world, roll, now) {
         kind: "stock",
         title: `Header tank at ${b.waterTankPct}% in ${b.name}`,
         detail: `About ${Math.max(1, Math.round((b.waterTankPct / 100) * 18))} hours of supply at the current draw.`,
-        recommendation: "Refill now and check the ballcock — a slow fill overnight is what empties these tanks.",
+        recommendation: "Refill now and check the ballcock.",
       })
     );
   if (b.feedDays < 4)
@@ -439,7 +437,7 @@ export function barnAlerts(world, roll, now) {
         kind: "stock",
         title: `${b.feedDays} days of feed left in ${b.name}`,
         detail: "Based on the current ration for the occupied boxes.",
-        recommendation: "Place the order today so delivery lands before the weekend.",
+        recommendation: "Order today so it lands before the weekend.",
       })
     );
   if (b.beddingDays < 3)
@@ -451,7 +449,7 @@ export function barnAlerts(world, roll, now) {
         kind: "stock",
         title: `Bedding low in ${b.name}`,
         detail: `${b.beddingDays} days remaining.`,
-        recommendation: "Add to the next feed order rather than making a separate trip.",
+        recommendation: "Add it to the next feed order.",
       })
     );
   return out;
