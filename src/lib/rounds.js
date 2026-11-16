@@ -1,19 +1,19 @@
 /* ==========================================================================
    Rounds: who does which boxes.
 
-   Mucking out and feeding are not like riding. A rider is put on a horse for
-   one morning and it changes tomorrow; a groom is given a run of boxes and
-   keeps them for months. The work is assigned to the box rather than to the
-   horse standing in it — when a horse moves, whoever does that corner of the
-   barn still does that corner.
+   Mucking out and feeding are not like the rest of the day's work. The vet is
+   booked for one horse on one morning and it changes tomorrow; a groom is
+   given a run of boxes and keeps them for months. The work is assigned to the
+   box rather than to the horse standing in it — when a horse moves, whoever
+   does that corner of the barn still does that corner.
 
    And it goes by proximity. Nobody is given eight boxes scattered over three
    barns: they are given one end of Barn 2, because that is how the work is
    actually walked. So a round is a set of stalls, offered a barn at a time.
 
    A round is therefore standing configuration, not part of the day's plan. The
-   plan says who is riding what this morning; the rounds say who does the boxes
-   every morning. Progress against a round comes from the care log — the taps
+   plan says who is seeing the farrier this morning; the rounds say who does
+   the boxes every morning. Progress against a round comes from the care log — the taps
    on the screen on the front of each box — so it is live without anybody
    having to report anything.
    ========================================================================== */

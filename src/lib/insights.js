@@ -249,8 +249,9 @@ export function stallAlerts(world, st, now) {
     );
   }
 
-  // rounds the box screen has not had pressed. The yard set the target, so a
-  // box that is two rounds down by the afternoon is a real gap, not a nag
+  // rounds with nothing against them — neither seen by the camera nor
+  // confirmed on the box. The yard set the target, so a box two rounds down by
+  // the afternoon is a real gap, not a nag
   ["feed", "clean"].forEach((kind) => {
     const c = careToday(world, animal, now)[kind];
     if (c.behind < 1) return;
@@ -262,13 +263,17 @@ export function stallAlerts(world, st, now) {
         severity: c.behind >= 2 ? "warning" : "info",
         kind: "care",
         title: `${animal.name} is ${c.behind} ${kind === "feed" ? "feed" : "muck out"}${c.behind === 1 ? "" : "s"} behind`,
-        detail: `${c.done} of ${c.target} recorded on the box screen today, ${c.due} due by now.${
-          c.last ? ` Last done at ${new Date(c.last.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} by ${c.last.by}.` : " Nothing recorded today."
+        detail: `${c.done} of ${c.target} recorded today, ${c.due} due by now.${
+          c.last
+            ? ` Last at ${new Date(c.last.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}, ${
+                c.last.source === "camera" ? "seen by the camera" : `confirmed by ${c.last.by}`
+              }.`
+            : " Nothing recorded today."
         }`,
         recommendation:
           kind === "feed"
-            ? "Check the horse was fed, then press it in on the box screen."
-            : "Get the box done and press it in on the box screen.",
+            ? "Check the horse was fed. If it was, confirm it on the box screen."
+            : "Get the box done, or confirm it on the box screen if it has been.",
         actions: [{ id: "openAnimal", label: "Open profile" }],
       })
     );

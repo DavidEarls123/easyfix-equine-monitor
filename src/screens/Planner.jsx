@@ -1,17 +1,24 @@
 /* ==========================================================================
    The job planner.
 
-   The morning is not only riding. The string goes out in lots while the boxes
-   are being mucked out, the farrier works down one barn and the vet sees three
-   horses before lunch. It is one plan because it is one set of people and one
-   set of horses, and because every bit of it has to end up in the message a
-   member of staff reads at five in the morning.
+   Who is doing what to which horse today. The boxes are being mucked out and
+   fed, the farrier works down one barn, the vet sees three before lunch, two
+   go swimming. It is one plan because it is one set of people and one set of
+   horses, and because every bit of it has to end up in the message a member of
+   staff reads at five in the morning.
+
+   The work splits in two, and the screen is built around the split:
+
+     • rounds — mucking out and feeding. A groom is given a run of boxes and
+       keeps it. Assigned to the box, a barn at a time, and left alone.
+     • jobs   — the farrier, the vet, exercise, the lorry. Assigned a horse at
+       a time, for one day.
 
    The constraint this screen is built against is not prettiness, it is doing
    three hundred assignments without the manager losing their place. So there
-   are two ways to assign, because a manager with a mouse and a manager with a
-   touchscreen want different things:
-     • drag a horse from the pool onto a rider or a job, or
+   are two ways to assign a horse, because a manager with a mouse and a manager
+   with a touchscreen want different things:
+     • drag a horse from the pool onto the person doing the job, or
      • tap a horse to pick it up, then tap where it goes.
    ========================================================================== */
 
@@ -27,20 +34,15 @@ import {
   JOB_KINDS,
   activitiesOf,
   activityOf,
-  availableRiders,
   dayMessages,
   dayOfAnimal,
-  furlongs,
-  gallopOf,
-  gallopsOf,
   jobKind,
-  lotOfAnimal,
   planFor,
   planSummary,
-  ridesOf,
 } from "../lib/jobs";
 import { currentYard, animalsOfYard, stallOfAnimal, stallsOfYard } from "../lib/world";
 import {
+  ROUND_KINDS,
   describeRound,
   isRoundKind,
   roundFor,
@@ -53,49 +55,34 @@ import {
   unassigned,
 } from "../lib/rounds";
 
-const JOBS_TAB = "__jobs";
-
 export default function Planner() {
   const { world, now, actions } = useWorld();
   const yard = currentYard(world);
   const plan = planFor(world, now, yard);
   const horses = useMemo(() => animalsOfYard(world), [world]);
-  const [tab, setTab] = useState(plan.lots[0]?.id);
-  const [kind, setKind] = useState("muckout"); // which job the people grid is for
+  const [kind, setKind] = useState("muckout"); // which work the people grid is for
   const [held, setHeld] = useState(null); // the horse picked up, waiting to be put down
   const [q, setQ] = useState("");
-  const [showRiders, setShowRiders] = useState(false);
   const [sending, setSending] = useState(false);
-  const [editing, setEditing] = useState(null); // the ride whose detail is open
   const [preview, setPreview] = useState(null); // whose message the manager is reading
 
-  const onJobs = tab === JOBS_TAB;
-  const lot = onJobs ? null : plan.lots.find((l) => l.id === tab) || plan.lots[0];
-  const riders = availableRiders(world.staff);
   const summary = planSummary(plan, world.staff, horses);
-  const jobs = plan.jobs || [];
+  const onRound = isRoundKind(kind);
 
-  // horses still to be found a job. On a lot that means horses not yet ridden;
-  // on the jobs tab it means every horse, because a horse that worked at seven
-  // can still be shod at eleven.
+  // every horse in the yard, because a horse that swam at eight can still be
+  // shod at eleven — what it is already down for shows under its name
   const pool = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return horses
-      .filter((a) => onJobs || !lotOfAnimal(plan, a.id))
       .filter(
         (a) =>
           needle.length < 2 ||
           [a.name, a.owner, a.trainer].filter(Boolean).some((f) => String(f).toLowerCase().includes(needle))
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [horses, plan, q, onJobs]);
+  }, [horses, q]);
 
-  const place = (riderId, animalId) => {
-    if (!animalId || !lot) return;
-    actions.assignRide(now, lot.id, riderId, animalId);
-    setHeld(null);
-  };
-  // the same gesture as putting a horse under a rider: the job is made for
+  // the same gesture as putting a horse down anywhere: the job is made for
   // that person if it does not exist yet
   const putOnJob = (staffId, animalId) => {
     if (!animalId) return;
@@ -111,65 +98,32 @@ export default function Planner() {
           <div className="sub">
             {yard?.name} ·{" "}
             {new Date(now).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })} ·{" "}
-            {summary.rides} rides across {plan.lots.length} lots
-            {summary.furlongs ? ` · ${furlongs(summary.furlongs)} of work` : ""} · {summary.jobs} other jobs ·{" "}
-            {summary.people} people
+            {summary.jobs} job{summary.jobs === 1 ? "" : "s"} · {summary.horses} horse
+            {summary.horses === 1 ? "" : "s"} · {summary.people} {summary.people === 1 ? "person" : "people"}
           </div>
         </div>
         <div className="hd-actions">
-          <button className="btn" onClick={() => setShowRiders(true)}>
-            <Icon name="id" size={15} /> Riders ({riders.length})
+          <button className="btn" onClick={() => go("staff")}>
+            <Icon name="id" size={15} /> Staff
           </button>
           <button className="btn" onClick={() => go("board")}>
             <Icon name="screen" size={15} /> Yard board
           </button>
-          <button
-            className="btn pri"
-            disabled={!summary.rides && !summary.jobs}
-            onClick={() => setSending(true)}
-          >
+          <button className="btn pri" onClick={() => setSending(true)}>
             <Icon name="bell" size={15} /> Publish
           </button>
         </div>
       </div>
 
-      {/* the lots, as the manager thinks of them, and then everything else */}
-      <div className="lot-bar">
-        {plan.lots.map((l) => {
-          const filled = l.rides.filter((r) => r.animalId).length;
-          const g = gallopOf(yard, l.gallopId);
-          return (
-            <button key={l.id} className={`lot-tab ${l.id === tab ? "on" : ""}`} onClick={() => setTab(l.id)}>
-              <span className="lt-time nums">{l.time}</span>
-              <span className="lt-name">{l.label}</span>
-              {g && <span className="lt-gallop">{g.label}</span>}
-              <span className="lt-count nums">{filled}</span>
-            </button>
-          );
-        })}
-        <button className="lot-tab add" onClick={() => actions.setLots(now, [...plan.lots, nextLot(plan.lots)])}>
-          <Icon name="plus" size={16} />
-          <span className="lt-name">Add lot</span>
-        </button>
-        <button className={`lot-tab jobs ${onJobs ? "on" : ""}`} onClick={() => setTab(JOBS_TAB)}>
-          <Icon name="job" size={16} />
-          <span className="lt-name">Yard jobs</span>
-          <span className="lt-count nums">{jobs.length}</span>
-        </button>
-      </div>
-
       {/* this row is always here, filled or not, so picking a horse up never
           shifts what is underneath the manager's cursor */}
-      {/* picking a horse up means nothing when the job is a run of boxes */}
-      <div
-        className={`held-bar ${held ? "on" : ""}`}
-        style={onJobs && isRoundKind(kind) ? { display: "none" } : undefined}
-      >
+      {/* picking a horse up means nothing when the work is a run of boxes */}
+      <div className={`held-bar ${held ? "on" : ""}`} style={onRound ? { display: "none" } : undefined}>
         {held ? (
           <>
             <Coat animal={held} size={26} />
             <b>{held.name}</b>
-            <span>picked up — now tap {onJobs ? "whoever is doing it" : "the rider who is on it"}</span>
+            <span>picked up — now tap whoever is doing it</span>
             <button className="btn sm ghost" onClick={() => setHeld(null)}>
               Put back
             </button>
@@ -177,9 +131,7 @@ export default function Planner() {
         ) : (
           <>
             <Icon name="head" size={18} />
-            <span>
-              Tap a horse to pick it up, or drag it straight onto {onJobs ? "the person doing the job" : "a rider"}.
-            </span>
+            <span>Tap a horse to pick it up, or drag it straight onto the person doing the job.</span>
           </>
         )}
       </div>
@@ -189,33 +141,17 @@ export default function Planner() {
         style={{
           // handing out boxes needs the room; the pool of horses is for the
           // jobs that are assigned a horse at a time
-          gridTemplateColumns: onJobs && isRoundKind(kind) ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(300px,0.52fr)",
+          gridTemplateColumns: onRound ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(300px,0.52fr)",
           alignItems: "start",
         }}
       >
-        {onJobs ? (
-          <JobsPanel plan={plan} kind={kind} onKind={setKind} held={held} onPlace={putOnJob} />
-        ) : (
-          <LotPanel
-            lot={lot}
-            yard={yard}
-            plan={plan}
-            riders={riders}
-            held={held}
-            onPlace={place}
-            onEdit={setEditing}
-          />
-        )}
+        <JobsPanel plan={plan} kind={kind} onKind={setKind} held={held} onPlace={putOnJob} />
 
-        {/* the horses still to be found something to do, and what the plan says */}
-        <div className="grid" style={onJobs && isRoundKind(kind) ? { display: "none" } : undefined}>
+        {/* the horses, and what the plan says */}
+        <div className="grid" style={onRound ? { display: "none" } : undefined}>
           <Card
-            title={onJobs ? "Every horse" : "Horses not down yet"}
-            sub={
-              onJobs
-                ? `${pool.length} in ${yard?.name || "this yard"} — a horse can be on more than one job`
-                : `${pool.length} of ${horses.length} unassigned this morning`
-            }
+            title="Every horse"
+            sub={`${pool.length} in ${yard?.name || "this yard"} — a horse can be on more than one job`}
           >
             <div className="filter-search" style={{ marginBottom: 10 }}>
               <Icon name="search" size={15} />
@@ -227,7 +163,7 @@ export default function Planner() {
               />
             </div>
             <div className="pool">
-              {pool.length === 0 && <div className="small mute">Every horse is down for a lot.</div>}
+              {pool.length === 0 && <div className="small mute">No horse here matches that.</div>}
               {pool.map((a) => (
                 <button
                   key={a.id}
@@ -278,267 +214,39 @@ export default function Planner() {
         </div>
       </div>
 
-      {showRiders && <RiderPicker onClose={() => setShowRiders(false)} />}
       {sending && <SendList plan={plan} yard={yard} onClose={() => setSending(false)} />}
-      {editing && <RideDetail {...editing} onClose={() => setEditing(null)} />}
     </>
-  );
-}
-
-/* ------------------------------- one lot ---------------------------------- */
-
-function LotPanel({ lot, yard, plan, riders, held, onPlace, onEdit }) {
-  const { world, now, actions } = useWorld();
-  const summary = planSummary(plan, world.staff, animalsOfYard(world));
-
-  return (
-    <Card
-      title={`${lot?.label} — ${lot?.time}`}
-      sub={`${lot?.rides.filter((r) => r.animalId).length || 0} of ${riders.length} riders have a horse`}
-      right={
-        <div className="row" style={{ gap: 8 }}>
-          {/* a lot works on a named piece of ground, and the riders are told it */}
-          <select
-            className="sel"
-            style={{ width: "auto", maxWidth: 190 }}
-            value={lot?.gallopId || ""}
-            onChange={(e) => actions.setLotGallop(now, lot.id, e.target.value || null)}
-            title="Which gallop this lot is on"
-          >
-            <option value="">No gallop set</option>
-            {gallopsOf(yard).map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.label}
-              </option>
-            ))}
-          </select>
-          <button className="btn sm act" disabled={!summary.rides && !summary.jobs} onClick={() => actions.markPlanSaved(now)}>
-            <Icon name="check" size={14} /> Save the day
-          </button>
-        </div>
-      }
-    >
-      {riders.length === 0 ? (
-        <Empty icon="id">Nobody is marked as riding today.</Empty>
-      ) : (
-        <div className="rider-grid">
-          {riders.map((p) => {
-            const ride = lot?.rides.find((r) => r.riderId === p.id);
-            const animal = ride?.animalId ? world.animals.find((a) => a.id === ride.animalId) : null;
-            const all = ridesOf(plan, p.id).length;
-            return (
-              <div
-                key={p.id}
-                className={`rider-card ${animal ? "filled" : ""} ${held ? "target" : ""}`}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  onPlace(p.id, e.dataTransfer.getData("text/animal"));
-                }}
-                onClick={() => held && onPlace(p.id, held.id)}
-              >
-                <div className="rc-hd">
-                  <ScrollName className="rc-nm">{p.name}</ScrollName>
-                  <span className="rc-lots nums" title={`${all} rides this morning`}>
-                    {all}
-                  </span>
-                </div>
-                {animal ? (
-                  <>
-                    <div className="rc-horse">
-                      <span className="silks-cell">
-                        <Silks animal={animal} size={28} />
-                      </span>
-                      <div className="grow" style={{ minWidth: 0 }}>
-                        <ScrollName className="strong">{animal.name}</ScrollName>
-                        <ScrollName className="tiny mute">{boxOf(world, animal)}</ScrollName>
-                      </div>
-                      <button
-                        className="icon-btn sm"
-                        title="What this horse is doing"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit({ lot, ride, animal });
-                        }}
-                      >
-                        <Icon name="edit" size={13} />
-                      </button>
-                      <button
-                        className="icon-btn sm"
-                        title="Take this horse off"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          actions.clearRide(now, lot.id, ride.id);
-                        }}
-                      >
-                        <Icon name="close" size={13} />
-                      </button>
-                    </div>
-                    <RideTags ride={ride} />
-                  </>
-                ) : (
-                  <div className="rc-slot">{held ? `Tap to put ${held.name} up` : "Drop a horse here"}</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* the destructive one lives at the foot, clear of everything else */}
-      {lot?.rides.length > 0 && (
-        <div className="lot-foot">
-          <button className="btn sm ghost" onClick={() => lot.rides.forEach((r) => actions.clearRide(now, lot.id, r.id))}>
-            <Icon name="close" size={13} /> Clear {lot.label}
-          </button>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-/** How far and what else, under the horse's name on the rider's card. */
-function RideTags({ ride }) {
-  const { world } = useWorld();
-  const d = furlongs(ride.distanceF);
-  const tags = (ride.activities || []).map((id) => activityOf(world.settings, id)).filter(Boolean);
-  if (!d && !tags.length && !ride.note) return null;
-  return (
-    <div className="rc-tags">
-      {d && <span className="tag dist nums">{d}</span>}
-      {tags.map((t) => (
-        <span key={t.id} className="tag" style={{ background: t.colour }}>
-          {t.label}
-        </span>
-      ))}
-      {ride.note && (
-        <span className="tag note" title={ride.note}>
-          <Icon name="note" size={10} /> {ride.note}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* ---------------------------- how far, and what --------------------------- */
-
-const QUICK_F = [2, 3, 4, 5, 6, 7, 8, 10, 12];
-
-function RideDetail({ lot, ride, animal, onClose }) {
-  const { world, now, actions } = useWorld();
-  const [distanceF, setDistance] = useState(ride.distanceF || "");
-  const [activities, setActivities] = useState(ride.activities || []);
-  const [note, setNote] = useState(ride.note || "");
-  const tags = activitiesOf(world.settings);
-
-  const save = () => {
-    actions.setRideDetail(now, lot.id, ride.id, {
-      distanceF: distanceF === "" ? null : Number(distanceF),
-      activities,
-      note: note.trim(),
-    });
-    onClose();
-  };
-
-  return (
-    <Modal
-      title={animal?.name || "This ride"}
-      onClose={onClose}
-      footer={
-        <>
-          <span className="small mute" style={{ marginRight: "auto" }}>
-            {lot.label} · {lot.time}
-          </span>
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn pri" onClick={save}>
-            <Icon name="check" size={15} /> Save
-          </button>
-        </>
-      }
-    >
-      <div className="grid" style={{ gap: 14 }}>
-        <Field label="How far" hint="Furlongs. It goes into the rider's message as 6f or 1m 2f.">
-          <div className="row" style={{ gap: 7, flexWrap: "wrap" }}>
-            {QUICK_F.map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={`grp-pick ${Number(distanceF) === f ? "on" : ""}`}
-                onClick={() => setDistance(Number(distanceF) === f ? "" : f)}
-              >
-                {furlongs(f)}
-              </button>
-            ))}
-            <input
-              className="inp nums"
-              style={{ width: 92 }}
-              type="number"
-              min="0"
-              max="40"
-              placeholder="f"
-              value={distanceF}
-              onChange={(e) => setDistance(e.target.value)}
-            />
-          </div>
-        </Field>
-
-        <Field label="Doing what" hint="As many as apply — a horse can canter and then go on the walker.">
-          <div className="row" style={{ gap: 7, flexWrap: "wrap" }}>
-            {tags.map((t) => {
-              const on = activities.includes(t.id);
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={`grp-pick ${on ? "on" : ""}`}
-                  style={on ? { background: t.colour, borderColor: t.colour } : undefined}
-                  onClick={() => setActivities((x) => (on ? x.filter((i) => i !== t.id) : [...x, t.id]))}
-                >
-                  {on && <Icon name="check" size={12} />}
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-
-        <Field label="Anything else" hint="Goes out word for word.">
-          <input
-            className="inp"
-            placeholder="Upsides with the grey, don't go past him"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
-      </div>
-    </Modal>
   );
 }
 
 /* ------------------------------ the other work ---------------------------- */
 
+/* The one bar the whole screen is steered from: the two standing rounds, then
+   the day's jobs. A round is done by the yard staff; a job says who does it. */
+const KIND_TABS = [
+  ...ROUND_KINDS.map((k) => ({ ...k, group: "yard", round: true })),
+  ...JOB_KINDS.map((k) => ({ ...k, round: false })),
+];
+const kindTab = (id) => KIND_TABS.find((k) => k.id === id) || KIND_TABS[0];
+
 /**
- * The other work, laid out the way the lots are: pick what is being done, and
- * you get the people who do it. A horse goes onto a person in one gesture —
- * there is no job to create first, because a job is just a person with horses
- * against their name.
+ * Pick what is being done, and you get the people who do it. A horse goes onto
+ * a person in one gesture — there is no job to create first, because a job is
+ * just a person with horses against their name.
  */
 function JobsPanel({ plan, kind, onKind, held, onPlace }) {
   const { world, now, actions } = useWorld();
   const jobs = plan.jobs || [];
-  const summary = planSummary(plan, world.staff, animalsOfYard(world));
-  const spec = jobKind(kind);
+  const spec = kindTab(kind);
   const people = spec.group === "all" ? world.staff || [] : staffIn(world.staff, spec.group);
 
   return (
     /* one grid child, so the kind bar and the people sit in the left column
-       together and the pool stays where it is on the lot tabs */
+       together and the pool stays put beside them */
     <div className="grid" style={{ gap: 0 }}>
-      {/* what is being done — the jobs equivalent of the lot tabs */}
+      {/* what is being done: the one bar the screen is steered from */}
       <div className="kind-bar">
-        {JOB_KINDS.map((k) => {
+        {KIND_TABS.map((k) => {
           // mucking out and feeding count boxes on a round; the rest count
           // horses put down for the day
           const n = isRoundKind(k.id)
@@ -570,11 +278,7 @@ function JobsPanel({ plan, kind, onKind, held, onPlace }) {
               : `Nobody is in the ${groupOf(spec.group).label.toLowerCase()} group yet`
           }
           right={
-            <button
-              className="btn sm act"
-              disabled={!summary.rides && !summary.jobs}
-              onClick={() => actions.markPlanSaved(now)}
-            >
+            <button className="btn sm act" disabled={!jobs.length} onClick={() => actions.markPlanSaved(now)}>
               <Icon name="check" size={14} /> Save the day
             </button>
           }
@@ -947,67 +651,11 @@ const boxOf = (world, animal) => {
 
 /** In the pool, a horse says where it lives — or what it is already down for. */
 function poolLine(world, plan, animal) {
-  const { rides, jobs } = dayOfAnimal(plan, animal.id);
-  if (!rides.length && !jobs.length) return boxOf(world, animal);
-  const bits = rides.map((r) => `${r.lot.label}${furlongs(r.distanceF) ? ` ${furlongs(r.distanceF)}` : ""}`);
-  jobs.forEach((j) => bits.push(jobKind(j.kind).label));
-  return bits.join(" · ");
-}
-
-const nextLot = (lots) => {
-  const n = lots.length + 1;
-  const last = lots[lots.length - 1]?.time || "07:00";
-  const [h, m] = last.split(":").map(Number);
-  const t = new Date();
-  t.setHours(h, m + 75, 0, 0);
-  return {
-    id: `lot${n}`,
-    label: `Lot ${n}`,
-    time: `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`,
-    gallopId: null,
-    rides: [],
-  };
-};
-
-/* --------------------------- who is riding today --------------------------- */
-
-function RiderPicker({ onClose }) {
-  const { world, actions } = useWorld();
-  const riders = (world.staff || []).filter((p) => (p.groups || []).includes("riders"));
-  const on = riders.filter((p) => p.riding !== false).length;
-
-  return (
-    <Modal
-      title="Riders today"
-      onClose={onClose}
-      footer={
-        <>
-          <span className="small mute" style={{ marginRight: "auto" }}>
-            {on} of {riders.length} riding
-          </span>
-          <button className="btn" onClick={() => riders.forEach((p) => actions.updateStaff(p.id, { riding: true }))}>
-            All on
-          </button>
-          <button className="btn pri" onClick={onClose}>
-            Done
-          </button>
-        </>
-      }
-    >
-      <div className="grid" style={{ gap: 2 }}>
-        {riders.map((p) => (
-          <div className="row" key={p.id} style={{ gap: 10, padding: "7px 0", borderBottom: "1px solid var(--line)" }}>
-            <Switch on={p.riding !== false} onChange={(v) => actions.updateStaff(p.id, { riding: v })} />
-            <b style={{ fontSize: 13.5 }}>{p.name}</b>
-            <span className="tiny mute" style={{ marginLeft: "auto" }}>
-              {p.phone}
-            </span>
-          </div>
-        ))}
-        {!riders.length && <Empty icon="id">Nobody is in the riders group yet.</Empty>}
-      </div>
-    </Modal>
-  );
+  const { jobs } = dayOfAnimal(plan, animal.id);
+  if (!jobs.length) return boxOf(world, animal);
+  return jobs
+    .map((j) => `${j.at ? `${j.at} ` : ""}${j.kind === "other" && j.label ? j.label : jobKind(j.kind).label}`)
+    .join(" · ");
 }
 
 /* ----------------------------- sending the day ----------------------------- */
@@ -1015,24 +663,25 @@ function RiderPicker({ onClose }) {
 /**
  * Publishing the day.
  *
- * One message per person, carrying everything they have — a rider down for
- * three lots who is also mucking out gets one text listing four things, not
- * four texts. It goes now, or it waits for the hour the yard sends at.
+ * One message per person, carrying everything they have — a groom with a round
+ * of boxes who is also holding two for the farrier gets one text listing three
+ * things, not three texts. It goes now, or it waits for the hour the yard
+ * sends at.
  */
 function SendList({ plan, yard, onClose }) {
   const { world, now, actions } = useWorld();
   const [when, setWhen] = useState("now");
-  const [at, setAt] = useState(world.settings.ridesSendAt || "05:30");
+  const [at, setAt] = useState(world.settings.planSendAt || "05:30");
   const messages = dayMessages(plan, world, yard);
-  const rides = messages.reduce((n, m) => n + m.rideCount, 0);
+  const rounds = messages.reduce((n, m) => n + m.roundCount, 0);
   const jobs = messages.reduce((n, m) => n + m.jobCount, 0);
 
   const send = () => {
-    if (when === "at" && at !== world.settings.ridesSendAt) actions.setSettings({ ridesSendAt: at });
+    if (when === "at" && at !== world.settings.planSendAt) actions.setSettings({ planSendAt: at });
     actions.sendMessage({
       subject: `${yard?.name || "Yard"}: ${new Date(now).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}`,
       body: messages
-        .map((m) => `${m.to.name} (${m.rideCount} rides, ${m.jobCount} jobs)\n${m.body.split("\n").slice(2, -2).join("\n")}`)
+        .map((m) => `${m.to.name} (${m.roundCount} rounds, ${m.jobCount} jobs)\n${m.body.split("\n").slice(2, -2).join("\n")}`)
         .join("\n\n"),
       audience: "Everyone with something on",
       recipients: messages.length,
@@ -1052,7 +701,7 @@ function SendList({ plan, yard, onClose }) {
       footer={
         <>
           <span className="small mute" style={{ marginRight: "auto" }}>
-            {messages.length} people · {rides} rides · {jobs} jobs · one message each
+            {messages.length} people · {rounds} rounds · {jobs} jobs · one message each
           </span>
           <button className="btn" onClick={onClose}>
             Cancel
@@ -1088,7 +737,7 @@ function SendList({ plan, yard, onClose }) {
           </Field>
 
           <div className="hint">
-            Each person gets one message with everything they are down for — lots, gallops, distances and jobs.
+            Each person gets one message with everything they are down for — their round of boxes and every job.
             Anyone with nothing on is not messaged.
           </div>
 
@@ -1097,9 +746,9 @@ function SendList({ plan, yard, onClose }) {
               <div className="msg-preview" key={m.to.id}>
                 <div className="row" style={{ gap: 8 }}>
                   <b>{m.to.name}</b>
-                  {m.rideCount > 0 && (
+                  {m.roundCount > 0 && (
                     <Pill tone="flat">
-                      {m.rideCount} ride{m.rideCount === 1 ? "" : "s"}
+                      {m.roundCount} round{m.roundCount === 1 ? "" : "s"}
                     </Pill>
                   )}
                   {m.jobCount > 0 && (

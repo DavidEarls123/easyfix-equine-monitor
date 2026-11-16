@@ -13,7 +13,7 @@ import { HORSE_STYLES } from "../lib/horse-style";
 import { behaviourAt } from "../lib/sim";
 import CameraView from "../components/CameraView";
 import { useWorld } from "../lib/store";
-import { DEFAULT_ACTIVITIES, activitiesOf, furlongs, gallopsOf, lotsOf } from "../lib/jobs";
+import { DEFAULT_ACTIVITIES, activitiesOf } from "../lib/jobs";
 import { barnsOfYard, bigYard, currentYard } from "../lib/world";
 
 export default function Settings({ snap }) {
@@ -70,11 +70,7 @@ export default function Settings({ snap }) {
           <YardEditor />
         </Card>
 
-        <Card title="Lots and gallops" sub="For the yard that is open — the ground is different at every yard">
-          <LotEditor />
-        </Card>
-
-        <Card title="Activity tags" sub="What a horse can be down for on top of its lot">
+        <Card title="Activity tags" sub="What a horse can be put down for on a job">
           <ActivityEditor />
         </Card>
 
@@ -104,6 +100,17 @@ export default function Settings({ snap }) {
           <div className="grid" style={{ gap: 12 }}>
             <Switch on={s.camera.identify} label="Identify horses and flag mismatches" onChange={(v) => actions.setSettings({ camera: { ...s.camera, identify: v } })} />
             <Switch on={s.camera.behaviour} label="Behaviour alerts (colic, lameness, box walking)" onChange={(v) => actions.setSettings({ camera: { ...s.camera, behaviour: v } })} />
+            <Switch
+              on={s.camera.care !== false}
+              label="Recognise feeding and mucking out"
+              onChange={(v) => actions.setSettings({ camera: { ...s.camera, care: v } })}
+            />
+            <div className="hint" style={{ lineHeight: 1.7 }}>
+              With recognition on, a feed going in and a box being done are recorded as the camera sees them and nobody
+              has to press anything. A round it is less sure of than the figure below is left off the record, and the
+              screen on the box front is how somebody confirms it — or takes off a round the camera called wrongly.
+              Turn recognition off and every round is entered by hand, as before.
+            </div>
             <Field label="Minimum confidence to act (%)">
               <input
                 className="inp nums"
@@ -150,7 +157,7 @@ export default function Settings({ snap }) {
 
         <Card
           title="Feeding and mucking out"
-          sub="The default rounds a horse gets, and what the box screens count against"
+          sub="The default rounds a horse gets, and what the cameras and box screens count against"
         >
           <div className="grid" style={{ gap: 12 }}>
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -178,7 +185,8 @@ export default function Settings({ snap }) {
             <div className="hint" style={{ lineHeight: 1.7 }}>
               Any horse can override these on its own profile — a horse on four small feeds is set there, not here. Rounds
               are spread across the working day, and a box is only counted behind once a slot has passed with half an
-              hour's grace, so the screens do not nag a yard that is simply running a little late.
+              hour's grace, so the screens do not nag a yard that is simply running a little late. Most rounds are
+              recorded by the camera over the box; the button on the box front is there for the ones it does not call.
             </div>
           </div>
         </Card>
@@ -631,130 +639,9 @@ function YardEditor() {
   );
 }
 
-/* --------------------------- lots and the gallops -------------------------- */
-
-/** The lots a yard runs, and the named ground they work on. */
-function LotEditor() {
-  const { world, actions } = useWorld();
-  const yard = currentYard(world);
-  if (!yard) return null;
-  const lots = lotsOf(yard);
-  const gallops = gallopsOf(yard);
-
-  const setLots = (next) => actions.setYardConfig(yard.id, { lots: next });
-  const setGallops = (next) => actions.setYardConfig(yard.id, { gallops: next });
-  const patch = (list, i, p) => list.map((x, k) => (k === i ? { ...x, ...p } : x));
-
-  return (
-    <div className="grid" style={{ gap: 16 }}>
-      <Field label="Lots" hint="The template this yard plans from. A day already planned keeps its own lots.">
-        <div className="grid" style={{ gap: 7 }}>
-          {lots.map((l, i) => (
-            <div className="lot-row" key={l.id || i}>
-              <input
-                className="inp nums time"
-                type="time"
-                value={l.time}
-                onChange={(e) => setLots(patch(lots, i, { time: e.target.value }))}
-              />
-              <input
-                className="inp"
-                value={l.label}
-                onChange={(e) => setLots(patch(lots, i, { label: e.target.value }))}
-              />
-              <select
-                className="sel"
-                value={l.gallopId || ""}
-                onChange={(e) => setLots(patch(lots, i, { gallopId: e.target.value || null }))}
-              >
-                <option value="">No gallop</option>
-                {gallops.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="icon-btn sm"
-                title="Remove this lot"
-                disabled={lots.length < 2}
-                onClick={() => setLots(lots.filter((_, k) => k !== i))}
-              >
-                <Icon name="trash" size={14} />
-              </button>
-            </div>
-          ))}
-          <div>
-            <button
-              className="btn sm"
-              onClick={() =>
-                setLots([...lots, { id: `lot${lots.length + 1}`, label: `Lot ${lots.length + 1}`, time: "12:00", gallopId: null }])
-              }
-            >
-              <Icon name="plus" size={14} /> Add a lot
-            </button>
-          </div>
-        </div>
-      </Field>
-
-      <Field label="Gallops" hint="Riders are told a name, so call them what the yard calls them.">
-        <div className="grid" style={{ gap: 7 }}>
-          {gallops.map((g, i) => (
-            <div className="lot-row gallop" key={g.id || i}>
-              <input
-                className="inp"
-                value={g.label}
-                onChange={(e) => setGallops(patch(gallops, i, { label: e.target.value }))}
-              />
-              <input
-                className="inp"
-                placeholder="Surface"
-                value={g.surface || ""}
-                onChange={(e) => setGallops(patch(gallops, i, { surface: e.target.value }))}
-              />
-              <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                <input
-                  className="inp nums num"
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={g.furlongs || ""}
-                  onChange={(e) => setGallops(patch(gallops, i, { furlongs: Number(e.target.value) || null }))}
-                />
-                <span className="tiny mute nowrap">{furlongs(g.furlongs) || "f"}</span>
-              </div>
-              <button
-                className="icon-btn sm"
-                title="Remove this gallop"
-                onClick={() => {
-                  setGallops(gallops.filter((_, k) => k !== i));
-                  // a lot pointing at ground that no longer exists would say nothing
-                  setLots(lots.map((l) => (l.gallopId === g.id ? { ...l, gallopId: null } : l)));
-                }}
-              >
-                <Icon name="trash" size={14} />
-              </button>
-            </div>
-          ))}
-          <div>
-            <button
-              className="btn sm"
-              onClick={() =>
-                setGallops([...gallops, { id: `gl_${Date.now().toString(36)}`, label: "New gallop", surface: "", furlongs: null }])
-              }
-            >
-              <Icon name="plus" size={14} /> Add a gallop
-            </button>
-          </div>
-        </div>
-      </Field>
-    </div>
-  );
-}
-
 /* ------------------------------ activity tags ------------------------------ */
 
-/** What a horse can be down for besides its lot: swimming, the walker, lunging. */
+/** What a horse can be put down for: swimming, the walker, lunging. */
 function ActivityEditor() {
   const { world, actions } = useWorld();
   const tags = activitiesOf(world.settings);

@@ -2,11 +2,15 @@
    The board on the yard wall.
 
    A big screen by the tack room that the string reads on the way past. Nobody
-   operates it, so there is nothing to press: it shows the lot that matters now,
-   rolls on by itself, and is legible from the other side of the yard.
+   operates it, so there is nothing to press: it shows the work that matters
+   now, rolls on by itself, and is legible from the other side of the yard.
 
-   Everything here is sized for distance rather than density — a rider should be
-   able to find their own name from twenty feet without stopping.
+   It rolls through the day's jobs a kind at a time — the farrier's list, the
+   vet's list, who is swimming — and finishes on the rounds, so a groom walking
+   in can see their own boxes and how far down them the morning is.
+
+   Everything here is sized for distance rather than density — somebody should
+   be able to find their own name from twenty feet without stopping.
    ========================================================================== */
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,16 +19,8 @@ import Silks from "../components/Silks";
 import ScrollName from "../components/ScrollName";
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
-import {
-  activityOf,
-  availableRiders,
-  furlongs,
-  gallopOf,
-  jobKind,
-  jobsOf,
-  planFor,
-  ridesOf,
-} from "../lib/jobs";
+import { activityOf, jobKind, JOB_KINDS, planFor } from "../lib/jobs";
+import { ROUND_KINDS, describeRound, roundProgress, roundsOf } from "../lib/rounds";
 import { currentYard, stallOfAnimal } from "../lib/world";
 
 const ROLL_MS = 12000;
@@ -34,24 +30,35 @@ export default function Board() {
   const yard = currentYard(world);
   const plan = planFor(world, now, yard);
   const jobs = (plan.jobs || []).filter((j) => j.staffId || (j.animalIds || []).length);
-  // the board rolls through the lots and then, if there is any, the other work
-  const slides = useMemo(
-    () => [
-      ...plan.lots.filter((l) => l.rides.some((r) => r.animalId)).map((l) => ({ kind: "lot", lot: l })),
-      ...(jobs.length ? [{ kind: "jobs" }] : []),
-    ],
-    [plan, jobs.length]
+
+  const rounds = useMemo(
+    () =>
+      ROUND_KINDS.flatMap((k) =>
+        roundsOf(world, k.id, yard?.id)
+          .filter((r) => (r.stallIds || []).length)
+          .map((r) => ({ kind: k, round: r }))
+      ),
+    [world, yard]
   );
+
+  // one slide per kind of work that has anything on it, then the rounds
+  const slides = useMemo(() => {
+    const byKind = JOB_KINDS.map((k) => ({
+      kind: "jobs",
+      label: k.label,
+      icon: k.icon,
+      colour: k.colour,
+      at: k.at,
+      jobs: jobs.filter((j) => j.kind === k.id),
+    })).filter((s) => s.jobs.length);
+    return [...byKind, ...(rounds.length ? [{ kind: "rounds", label: "The boxes" }] : [])];
+  }, [jobs, rounds.length]);
+
   const [i, setI] = useState(0);
   const [rolling, setRolling] = useState(true);
 
-  // the lot that is next up, so the board opens on the useful one
   useEffect(() => {
-    const hhmm = new Date(now).toTimeString().slice(0, 5);
-    const next = slides.findIndex((s) => s.kind === "lot" && s.lot.time >= hhmm);
-    setI(next >= 0 ? next : 0);
-    // only on mount: after that the board rolls or the user steers it
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setI(0);
   }, [slides.length]);
 
   useEffect(() => {
@@ -61,22 +68,6 @@ export default function Board() {
   }, [rolling, slides.length]);
 
   const slide = slides[Math.min(i, Math.max(0, slides.length - 1))];
-  const lot = slide?.kind === "lot" ? slide.lot : null;
-  const gallop = gallopOf(yard, lot?.gallopId);
-  const rows = useMemo(() => {
-    if (!lot) return [];
-    return lot.rides
-      .filter((r) => r.animalId)
-      .map((r) => ({
-        ride: r,
-        rider: (world.staff || []).find((p) => p.id === r.riderId),
-        animal: world.animals.find((a) => a.id === r.animalId),
-      }))
-      .sort((a, b) => (a.rider?.name || "").localeCompare(b.rider?.name || ""));
-  }, [lot, world]);
-
-  // somebody mucking out is not idle, so the board does not call them out
-  const idle = availableRiders(world.staff).filter((p) => !ridesOf(plan, p.id).length && !jobsOf(plan, p.id).length);
 
   return (
     <div className="board-wrap">
@@ -85,7 +76,7 @@ export default function Board() {
           <Icon name="left" size={14} /> Back to planning
         </button>
         <span className="small mute">
-          A mock-up of the screen on the yard wall — it rolls through the lots on its own.
+          A mock-up of the screen on the yard wall — it rolls through the day on its own.
         </span>
         <button className={`btn sm ${rolling ? "pri" : ""}`} onClick={() => setRolling((r) => !r)}>
           <Icon name={rolling ? "pause" : "play"} size={14} /> {rolling ? "Rolling" : "Paused"}
@@ -108,22 +99,23 @@ export default function Board() {
           <div className="bd-empty">
             <Icon name="head" size={50} />
             <h2>Nothing planned</h2>
-            <p>Assign horses and jobs on the planner and they appear here.</p>
+            <p>Assign jobs and rounds on the planner and they appear here.</p>
           </div>
         ) : (
           <>
             <div className="bd-lot">
-              {lot ? (
+              {slide.kind === "jobs" ? (
                 <>
-                  <span className="bd-lot-time nums">{lot.time}</span>
-                  <span className="bd-lot-name">{lot.label}</span>
-                  {gallop && <span className="bd-gallop">{gallop.label}</span>}
-                  <span className="bd-lot-n nums">{rows.length} out</span>
+                  {slide.at && <span className="bd-lot-time nums">{slide.at}</span>}
+                  <span className="bd-lot-name">{slide.label}</span>
+                  <span className="bd-lot-n nums">
+                    {slide.jobs.reduce((n, j) => n + (j.animalIds || []).length, 0)} horses
+                  </span>
                 </>
               ) : (
                 <>
-                  <span className="bd-lot-name">Around the yard</span>
-                  <span className="bd-lot-n nums">{jobs.length} jobs</span>
+                  <span className="bd-lot-name">The boxes</span>
+                  <span className="bd-lot-n nums">{rounds.length} rounds</span>
                 </>
               )}
               <div className="bd-dots">
@@ -133,41 +125,57 @@ export default function Board() {
               </div>
             </div>
 
-            {lot ? (
-              <div className="bd-rows" style={{ "--cols": rows.length > 14 ? 3 : rows.length > 6 ? 2 : 1 }}>
-                {rows.map(({ ride, rider, animal }) => (
-                  <div className="bd-row" key={ride.id}>
-                    <Silks animal={animal} size={40} />
-                    <div className="bd-pair">
-                      <ScrollName className="bd-rider">{rider?.name || "Unmanned"}</ScrollName>
-                      <ScrollName className="bd-horse">{animal?.name || "TBC"}</ScrollName>
-                    </div>
-                    <span className="bd-work">{workLabel(world, ride)}</span>
-                    <span className="bd-box nums">{animal ? boxLabel(world, animal) : ""}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bd-rows" style={{ "--cols": jobs.length > 8 ? 2 : 1 }}>
-                {jobs.map((j) => {
+            {slide.kind === "jobs" ? (
+              <div className="bd-rows" style={{ "--cols": slide.jobs.length > 8 ? 2 : 1 }}>
+                {slide.jobs.map((j) => {
                   const kind = jobKind(j.kind);
                   const person = (world.staff || []).find((p) => p.id === j.staffId);
-                  const names = (j.animalIds || [])
-                    .map((id) => world.animals.find((a) => a.id === id)?.name)
+                  const animals = (j.animalIds || [])
+                    .map((id) => world.animals.find((a) => a.id === id))
                     .filter(Boolean);
                   return (
                     <div className="bd-row" key={j.id}>
+                      {animals.length === 1 ? (
+                        <Silks animal={animals[0]} size={40} />
+                      ) : (
+                        <span className="bd-job-ico" style={{ color: kind.colour }}>
+                          <Icon name={kind.icon} size={30} />
+                        </span>
+                      )}
+                      <div className="bd-pair">
+                        <ScrollName className="bd-rider">{person?.name || "Nobody yet"}</ScrollName>
+                        <ScrollName className="bd-horse">
+                          {animals.length ? animals.map((a) => a.name).join(", ") : "No horses on it"}
+                        </ScrollName>
+                      </div>
+                      <span className="bd-work">{workLabel(world, j)}</span>
+                      <span className="bd-box nums">
+                        {animals.length === 1 ? boxLabel(world, animals[0]) : j.at || ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bd-rows" style={{ "--cols": rounds.length > 8 ? 2 : 1 }}>
+                {rounds.map(({ kind, round }) => {
+                  const person = (world.staff || []).find((p) => p.id === round.staffId);
+                  const p = roundProgress(world, round, now);
+                  return (
+                    <div className="bd-row" key={`${kind.id}|${round.id || round.staffId}`}>
                       <span className="bd-job-ico" style={{ color: kind.colour }}>
                         <Icon name={kind.icon} size={30} />
                       </span>
                       <div className="bd-pair">
                         <ScrollName className="bd-rider">{person?.name || "Nobody yet"}</ScrollName>
                         <ScrollName className="bd-horse">
-                          {j.kind === "other" && j.label ? j.label : kind.label}
-                          {names.length ? ` — ${names.join(", ")}` : ""}
+                          {kind.label} — {describeRound(world, round)}
                         </ScrollName>
                       </div>
-                      <span className="bd-box nums">{j.at || ""}</span>
+                      <span className={`bd-work ${p.tone}`}>
+                        {p.done}/{p.boxes} done{p.behind ? ` · ${p.behind} behind` : ""}
+                      </span>
+                      <span className="bd-box nums">{p.pct}%</span>
                     </div>
                   );
                 })}
@@ -178,27 +186,20 @@ export default function Board() {
 
         <footer className="bd-ft">
           <span>
-            {plan.lots.length} lots · {plan.lots.reduce((n, l) => n + l.rides.filter((r) => r.animalId).length, 0)} rides
-            {jobs.length ? ` · ${jobs.length} jobs` : ""}
+            {jobs.length} jobs
+            {rounds.length ? ` · ${rounds.length} rounds` : ""}
           </span>
-          {idle.length > 0 && (
-            <span className="bd-idle">
-              Not down to ride: {idle.slice(0, 6).map((p) => p.name.split(" ")[0]).join(", ")}
-              {idle.length > 6 ? ` +${idle.length - 6}` : ""}
-            </span>
-          )}
         </footer>
       </div>
     </div>
   );
 }
 
-/** How far, and anything else the horse is down for, in one line. */
-function workLabel(world, ride) {
+/** The time and anything the horse is down for, in one line. */
+function workLabel(world, job) {
   const bits = [];
-  const d = furlongs(ride.distanceF);
-  if (d) bits.push(d);
-  (ride.activities || []).forEach((id) => {
+  if (job.at) bits.push(job.at);
+  (job.activities || []).forEach((id) => {
     const tag = activityOf(world.settings, id);
     if (tag) bits.push(tag.label);
   });

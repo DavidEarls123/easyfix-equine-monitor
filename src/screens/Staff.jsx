@@ -14,7 +14,8 @@ import { Card, Empty, Field, Modal, Pill, Switch, Tabs, ago } from "../component
 import { useWorld } from "../lib/store";
 import { go } from "../lib/router";
 import { GROUPS, groupOf } from "../lib/staff";
-import { furlongs, jobKind, jobsOf, messageStamp, planFor, ridesOf } from "../lib/jobs";
+import { jobKind, jobsOf, messageStamp, planFor } from "../lib/jobs";
+import { ROUND_KINDS, describeRound, roundFor } from "../lib/rounds";
 import { currentYard } from "../lib/world";
 
 export default function Staff() {
@@ -49,12 +50,12 @@ export default function Staff() {
         <div>
           <h1>Staff</h1>
           <div className="sub">
-            {staff.length} people · {counts.riders || 0} riders · {(world.messages || []).length} messages sent
+            {staff.length} people · {counts.yard || 0} on the yard · {(world.messages || []).length} messages sent
           </div>
         </div>
         <div className="hd-actions">
           <button className="btn" onClick={() => go("rides")}>
-            <Icon name="helmet" size={15} /> Ride planning
+            <Icon name="helmet" size={15} /> Job planner
           </button>
           <button className="btn" onClick={() => setComposing(true)}>
             <Icon name="bell" size={15} /> Send a message
@@ -106,7 +107,7 @@ export default function Staff() {
                     <th>Groups</th>
                     <th>Email</th>
                     <th>Phone</th>
-                    <th>Riding today</th>
+                    <th>Boxes</th>
                     <th />
                   </tr>
                 </thead>
@@ -131,11 +132,7 @@ export default function Staff() {
                       <td className="small mute">{p.email}</td>
                       <td className="small mute nums">{p.phone}</td>
                       <td>
-                        {(p.groups || []).includes("riders") ? (
-                          <Switch on={p.riding !== false} onChange={(v) => actions.updateStaff(p.id, { riding: v })} />
-                        ) : (
-                          <span className="tiny mute">—</span>
-                        )}
+                        <BoxCount person={p} />
                       </td>
                       <td>
                         <button className="icon-btn" title="Edit" onClick={() => setEditing(p)}>
@@ -182,19 +179,42 @@ export default function Staff() {
   );
 }
 
+/** How many boxes this person holds across their standing rounds. */
+function BoxCount({ person }) {
+  const { world } = useWorld();
+  const held = ROUND_KINDS.map((k) => {
+    const r = roundFor(world, k.id, person.id);
+    return { kind: k, n: (r?.stallIds || []).length };
+  }).filter((x) => x.n);
+  if (!held.length) return <span className="tiny mute">—</span>;
+  return (
+    <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+      {held.map(({ kind, n }) => (
+        <span key={kind.id} className="tiny" style={{ color: kind.colour, whiteSpace: "nowrap" }}>
+          <b className="nums">{n}</b> {kind.label.toLowerCase()}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /* -------------------------------- the profile ------------------------------ */
 
 function StaffModal({ person, onClose }) {
   const { world, now, actions } = useWorld();
   const isNew = !person.id;
-  const [f, setF] = useState({ name: "", email: "", phone: "", groups: [], riding: true, ...person });
+  const [f, setF] = useState({ name: "", email: "", phone: "", groups: [], ...person });
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const toggle = (g) =>
     set("groups", f.groups.includes(g) ? f.groups.filter((x) => x !== g) : [...f.groups, g]);
 
   const plan = planFor(world, now);
-  const mine = person.id ? ridesOf(plan, person.id) : [];
   const myJobs = person.id ? jobsOf(plan, person.id) : [];
+  const myRounds = person.id
+    ? ROUND_KINDS.map((k) => ({ kind: k, round: roundFor(world, k.id, person.id) })).filter(
+        (r) => r.round && (r.round.stallIds || []).length
+      )
+    : [];
 
   const save = () => {
     if (!f.name.trim()) return;
@@ -261,27 +281,16 @@ function StaffModal({ person, onClose }) {
           </div>
         </Field>
 
-        {f.groups.includes("riders") && (
-          <Switch on={f.riding !== false} label="Available to ride today" onChange={(v) => set("riding", v)} />
-        )}
-
-        {(mine.length > 0 || myJobs.length > 0) && (
+        {(myRounds.length > 0 || myJobs.length > 0) && (
           <div>
             <div className="tiny mute" style={{ marginBottom: 5 }}>DOWN FOR TODAY</div>
-            {mine.map((r) => {
-              const a = world.animals.find((x) => x.id === r.animalId);
-              const d = furlongs(r.distanceF);
-              return (
-                <div className="row" key={r.id} style={{ gap: 8, padding: "3px 0" }}>
-                  <Pill tone="flat">{r.lot.time}</Pill>
-                  <ScrollName className="strong" style={{ fontSize: 13 }}>{a ? a.name : "TBC"}</ScrollName>
-                  <span className="tiny mute">
-                    {r.lot.label}
-                    {d ? ` · ${d}` : ""}
-                  </span>
-                </div>
-              );
-            })}
+            {myRounds.map(({ kind, round }) => (
+              <div className="row" key={kind.id} style={{ gap: 8, padding: "3px 0" }}>
+                <Pill tone="flat">{kind.at}</Pill>
+                <b style={{ fontSize: 13 }}>{kind.label}</b>
+                <span className="tiny mute">{describeRound(world, round)}</span>
+              </div>
+            ))}
             {myJobs.map((j) => (
               <div className="row" key={j.id} style={{ gap: 8, padding: "3px 0" }}>
                 <Pill tone="good">{j.at || "—"}</Pill>
@@ -381,7 +390,7 @@ function Compose({ onClose, preset }) {
             className="inp"
             rows={7}
             style={{ resize: "vertical", lineHeight: 1.6 }}
-            placeholder="Frost overnight — all lots pushed back thirty minutes."
+            placeholder="Frost overnight — the farrier is pushed back to eleven."
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />

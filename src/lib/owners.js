@@ -91,7 +91,7 @@ export const silksOf = (animal) => {
 /**
  * Who else carries this. Colours are registered to an owner and shared across
  * partnerships, so a groom reading a set off a box front wants to know which
- * other horses in the yard will look the same coming up the gallop.
+ * other horses in the yard will look the same on the racecourse.
  */
 export function stablemates(animals, animal) {
   const set = silksOf(animal);

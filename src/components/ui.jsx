@@ -7,7 +7,9 @@ import { colourOf } from "../lib/colours";
 
 /* --------------------------------- format --------------------------------- */
 
-export const hhmm = (ms) => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+/* A yard writes 06:48, never 6:48 AM — every clock in the product is 24-hour. */
+export const hhmm = (ms) =>
+  new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 export const dmy = (ms) => new Date(ms).toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "numeric" });
 
 export function ago(ms, now = Date.now()) {

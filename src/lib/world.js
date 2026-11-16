@@ -11,12 +11,12 @@ import { noise, between } from "./sim";
 import { DEFAULT_WEIGHTS } from "./score";
 import { DEFAULT_PASSPORT } from "./passport";
 import { DEFAULT_BASELINE } from "./baseline";
-import { DEFAULT_CARE, dueByNow, dueTimes } from "./care";
+import { DEFAULT_CARE } from "./care";
 import { DEFAULT_HORSE_STYLE } from "./horse-style";
-import { DEFAULT_ACTIVITIES, DEFAULT_GALLOPS, DEFAULT_LOTS, emptyPlan, lotsOf, planKey } from "./jobs";
+import { DEFAULT_ACTIVITIES, emptyPlan, planKey } from "./jobs";
 
 
-export const VERSION = 16;
+export const VERSION = 17;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS = {
   intakeGoal: 35,
   intakeLowPct: 70,
   noDrinkHours: 6,
-  camera: { identify: true, behaviour: true, minConfidence: 90, retentionDays: 14 },
+  camera: { identify: true, behaviour: true, care: true, minConfidence: 90, retentionDays: 14 },
   // how the horse is drawn on the feeds — a house preference, not a threshold
   horseStyle: DEFAULT_HORSE_STYLE,
   // how the welfare index is weighted — normalised at read time, so these
@@ -52,11 +52,11 @@ export const DEFAULT_SETTINGS = {
   baseline: { ...DEFAULT_BASELINE },
   // default rounds per day; a horse can override its own
   care: { ...DEFAULT_CARE },
-  // what a horse can be down for on top of its lot, named by the operator and
-  // shared across every yard they run
+  // what a horse can be put down for, named by the operator and shared across
+  // every yard they run
   activities: DEFAULT_ACTIVITIES.map((a) => ({ ...a })),
   // the hour a published morning goes out, if it is not sent there and then
-  ridesSendAt: "05:30",
+  planSendAt: "05:30",
   notify: { push: true, email: true, sms: false, quietFrom: 22, quietTo: 6 },
 };
 
@@ -132,7 +132,7 @@ export function barnsOf(world, yardId) {
 /* ------------------------------ one yard of many --------------------------- */
 
 /* An operator is a trainer, and a trainer may run more than one yard: a main
-   yard and a satellite up the road, each with its own barns, boxes, gallops and
+   yard and a satellite up the road, each with its own barns, boxes, horses and
    morning. Everything below answers "of the yard we are looking at". */
 
 /** The yard the app is currently showing. */
@@ -316,15 +316,9 @@ const BARN1 = [
   ["Josh's Joy", "normal"],
 ];
 
-/** A yard as the operator sets one up: a name, the lots it runs and the ground
-    it works on. Every yard carries its own, because they are different places. */
+/** A yard as the operator sets one up. A yard is a place with barns in it. */
 export function makeYard(name, id = uid("yd_")) {
-  return {
-    id,
-    name,
-    lots: DEFAULT_LOTS.map((l, i) => ({ id: `lot${i + 1}`, ...l, gallopId: null })),
-    gallops: DEFAULT_GALLOPS.map((g) => ({ ...g })),
-  };
+  return { id, name };
 }
 
 /**
@@ -334,21 +328,7 @@ export function makeYard(name, id = uid("yd_")) {
  */
 export function seedWorld() {
   const main = makeYard("Bawnmore", "yard1");
-  main.lots[0].gallopId = "gl_round";
-  main.lots[1].gallopId = "gl_straight";
-  main.lots[2].gallopId = "gl_hill";
-  main.lots[3].gallopId = "gl_canter";
-
   const hill = makeYard("Yearling Yard", "yard2");
-  // a yearling yard is breaking and long-reining, not working on a gallop
-  hill.gallops = [
-    { id: "gl_sandring", label: "Sand Ring", surface: "Sand", furlongs: 2 },
-    { id: "gl_lunge", label: "Lunge Ring", surface: "Sand", furlongs: 1 },
-    { id: "gl_longwalk", label: "The Long Walk", surface: "Woodchip", furlongs: 4 },
-  ];
-  hill.lots = hill.lots.slice(0, 2);
-  hill.lots[0].gallopId = "gl_sandring";
-  hill.lots[1].gallopId = "gl_longwalk";
 
   const world = {
     version: VERSION,
@@ -359,7 +339,10 @@ export function seedWorld() {
     stalls: [],
     animals: [],
     alertState: {},
+    // only what a person presses on a box is stored; what the camera
+    // recognises is derived at read time, and careVoid holds the corrections
     careLog: [],
+    careVoid: [],
     staff: [],
     rounds: [],
     ridePlan: {},
@@ -455,7 +438,7 @@ export function seedWorld() {
   addBarn("Barn 1", 16, true, hill.id);
   addBarn("Barn 2", 0, false, hill.id);
 
-  return seedPlan(seedStaff(seedCare(world)));
+  return seedPlan(seedStaff(world));
 }
 
 /** Bulk yard for the scale demo: a customer running 300 monitored boxes. */
@@ -495,114 +478,63 @@ export function bigYard(world, barnCount = 10, perBarn = 30) {
       st.animalId = animal.id;
     });
   }
-  return seedCare(next);
+  return next;
 }
 
 export { uid };
 
-/* --------------------------- the day's care record ------------------------- */
-
-/**
- * A believable morning: most boxes done on time, a few behind. Without this the
- * stall screens all read 0 of 3 and the feature looks broken rather than idle.
- */
-function seedCare(world) {
-  const now = Date.now();
-  const dayStart = new Date(now);
-  dayStart.setHours(0, 0, 0, 0);
-  const grooms = ["Graham", "Aoife", "Danny", "Marta", "Sean"];
-  const log = [];
-
-  world.stalls.forEach((st) => {
-    if (!st.animalId) return;
-    const animal = world.animals.find((a) => a.id === st.animalId);
-    if (!animal) return;
-    const target = { ...DEFAULT_CARE, ...(animal.care || {}) };
-    ["feed", "clean"].forEach((kind) => {
-      const want = kind === "feed" ? target.feeds : target.cleans;
-      const due = dueByNow(want, now);
-      // roughly one box in five is a round behind, which is what a yard looks like
-      const slip = noise(`slip|${st.id}|${kind}`) < 0.2 ? 1 : 0;
-      const doneCount = Math.max(0, due - slip);
-      dueTimes(want)
-        .slice(0, doneCount)
-        .forEach((hour, i) => {
-          const at = dayStart.getTime() + Math.round((hour + between(`late|${st.id}|${kind}|${i}`, -0.15, 0.45)) * 3600000);
-          if (at > now) return;
-          log.push({
-            id: `cr_seed_${st.id}_${kind}_${i}`,
-            at,
-            stallId: st.id,
-            animalId: animal.id,
-            kind,
-            by: grooms[Math.floor(noise(`who|${st.id}|${kind}|${i}`) * grooms.length) % grooms.length],
-          });
-        });
-    });
-  });
-
-  world.careLog = log.sort((a, b) => b.at - a.at);
-
-  // the lines a yard actually pins to a box front
-  const notes = {
-    "A Boy Named Susie": "Entered at Naas Saturday — travelling box 06:00",
-    Balantina: "Off her water since yesterday evening. Tell the vet at 09:00.",
-    "Comanche Brave": "Bucket by hand until the meter is fixed",
-    Glyfada: "Top door open, box runs warm",
-    Shaihaan: "Extra bedding, skip out again this evening",
-    "Dee's Funny Girl": "Hind shoes with the farrier at ten",
-  };
-  world.animals.forEach((a, i) => {
-    if (notes[a.name]) {
-      a.stallNote = notes[a.name];
-      a.noteLog = [{ at: Date.now() - 3600000 * (2 + (i % 9)), text: notes[a.name], by: "Declan Murphy" }];
-    }
-  });
-  return world;
-}
 
 /* ------------------------------- the day's work ---------------------------- */
 
 /**
- * A morning already half planned, so the planner opens on something rather than
- * on an empty grid. Two lots out, a few horses doing more than cantering, and
- * the work that is not ridden: two people on the boxes, the farrier, the vet.
+ * A morning already half planned, so the planner opens on something rather
+ * than on an empty grid: two going swimming, the farrier down one barn, the
+ * vet in to scope one. Then the standing rounds on top.
  */
 function seedPlan(world) {
   const yard = world.yards[0];
-  const plan = emptyPlan(lotsOf(yard));
-  const riders = world.staff.filter((p) => (p.groups || []).includes("riders") && p.riding !== false);
+  const plan = emptyPlan();
   const mine = world.animals.filter((a) => a.yardId === yard.id);
   const hands = world.staff.filter((p) => (p.groups || []).includes("yard"));
   const farrier = world.staff.find((p) => (p.groups || []).includes("farriers"));
   const vet = world.staff.find((p) => (p.groups || []).includes("vets"));
-
-  // the usual pattern: a working lot and then a steadier one
-  const shape = [
-    { ride: 6, distance: 6, tags: ["ac_work"] },
-    { ride: 5, distance: 4, tags: ["ac_canter"] },
-  ];
-  let h = 0;
-  plan.lots.slice(0, shape.length).forEach((lot, li) => {
-    const { ride, distance, tags } = shape[li];
-    riders.slice(0, ride).forEach((p, i) => {
-      const animal = mine[h++];
-      if (!animal) return;
-      const extra = i === 1 ? ["ac_walker"] : i === 3 ? ["ac_swim"] : [];
-      lot.rides.push({
-        id: `rd_seed_${li}_${i}`,
-        riderId: p.id,
-        animalId: animal.id,
-        distanceF: distance + (i % 3 === 0 ? 1 : 0),
-        activities: [...tags, ...extra],
-        note: i === 0 && li === 0 ? "Upsides with the grey, don't go past him" : "",
-      });
-    });
-  });
+  const ids = (from, to) => mine.slice(from, to).map((a) => a.id);
 
   plan.jobs = [
-    { id: "jb_seed_3", kind: "farrier", staffId: farrier?.id || null, at: "10:00", animalIds: mine.slice(2, 5).map((a) => a.id), note: "Front shoes, bring the travelling box in" },
-    { id: "jb_seed_4", kind: "vet", staffId: vet?.id || null, at: "09:00", animalIds: mine.slice(2, 3).map((a) => a.id), note: "Scope before any hard feed" },
+    {
+      id: "jb_seed_1",
+      kind: "exercise",
+      staffId: hands[0]?.id || null,
+      at: "08:00",
+      animalIds: ids(0, 2),
+      activities: ["ac_swim"],
+      note: "Two lengths each, walk them back",
+    },
+    {
+      id: "jb_seed_2",
+      kind: "exercise",
+      staffId: hands[1]?.id || null,
+      at: "08:30",
+      animalIds: ids(5, 9),
+      activities: ["ac_walker"],
+      note: "Forty minutes, both reins",
+    },
+    {
+      id: "jb_seed_3",
+      kind: "farrier",
+      staffId: farrier?.id || null,
+      at: "10:00",
+      animalIds: ids(2, 5),
+      note: "Front shoes, bring the travelling box in",
+    },
+    {
+      id: "jb_seed_4",
+      kind: "vet",
+      staffId: vet?.id || null,
+      at: "09:00",
+      animalIds: ids(2, 3),
+      note: "Scope before any hard feed",
+    },
   ];
 
   world.ridePlan = { [planKey(yard.id, Date.now())]: plan };
@@ -684,8 +616,6 @@ function seedStaff(world) {
       email: `${slug}@easyfixracing.ie`,
       phone,
       groups: groups.split(","),
-      // most riders are out, one or two are not — a day off, a bad back
-      riding: !groups.includes("riders") ? false : noise(`ride|${name}`) > 0.12,
     };
   });
 

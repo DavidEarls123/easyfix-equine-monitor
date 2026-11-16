@@ -8,7 +8,7 @@
 
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { VERSION, makeYard, seedWorld, syncStalls, uid } from "./world";
-import { emptyPlan, lotsOf, planKey, planYard } from "./jobs";
+import { emptyPlan, planKey, planYard } from "./jobs";
 
 const KEY = "easyfix.equine.world";
 const Ctx = createContext(null);
@@ -38,7 +38,7 @@ function openPlan(w, when) {
   const yard = planYard(w);
   const key = planKey(yard?.id, when);
   const stored = w.ridePlan?.[key];
-  return [key, stored ? { ...emptyPlan(lotsOf(yard)), ...stored, jobs: stored.jobs || [] } : emptyPlan(lotsOf(yard))];
+  return [key, { ...emptyPlan(), ...(stored || {}), jobs: stored?.jobs || [] }];
 }
 
 export function WorldProvider({ children }) {
@@ -102,7 +102,7 @@ export function WorldProvider({ children }) {
 
       /* --------------------------------- staff ------------------------------- */
       addStaff(person) {
-        const p = { id: uid("sf_"), groups: [], riding: true, ...person };
+        const p = { id: uid("sf_"), groups: [], ...person };
         edit((w) => {
           w.staff = [...(w.staff || []), p];
           return w;
@@ -123,11 +123,7 @@ export function WorldProvider({ children }) {
           w.ridePlan = Object.fromEntries(
             Object.entries(w.ridePlan || {}).map(([k, plan]) => [
               k,
-              {
-                ...plan,
-                lots: plan.lots.map((l) => ({ ...l, rides: l.rides.filter((r) => r.riderId !== id) })),
-                jobs: (plan.jobs || []).map((j) => (j.staffId === id ? { ...j, staffId: null } : j)),
-              },
+              { ...plan, jobs: (plan.jobs || []).map((j) => (j.staffId === id ? { ...j, staffId: null } : j)) },
             ])
           );
           return w;
@@ -139,76 +135,6 @@ export function WorldProvider({ children }) {
 
       /* The day's plan is held per yard as well as per day: a trainer with two
          yards runs two mornings, and they must not overwrite each other. */
-
-      /** Put a horse under a rider in a lot. A horse is ridden once a morning. */
-      assignRide(when, lotId, riderId, animalId) {
-        edit((w) => {
-          const [key, plan] = openPlan(w, when);
-          const lots = plan.lots.map((lot) => {
-            let rides = lot.rides;
-            // a horse cannot be in two places at once, so lift it out of wherever
-            // it was before putting it down here
-            if (animalId) rides = rides.filter((r) => r.animalId !== animalId);
-            if (lot.id === lotId) {
-              // one horse per rider per lot: replace rather than stack
-              rides = rides.filter((r) => r.riderId !== riderId);
-              rides = [...rides, { id: uid("rd_"), riderId, animalId, distanceF: null, activities: [] }];
-            }
-            return { ...lot, rides };
-          });
-          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots } };
-          return w;
-        });
-      },
-      clearRide(when, lotId, rideId) {
-        edit((w) => {
-          const [key, plan] = openPlan(w, when);
-          w.ridePlan = {
-            ...w.ridePlan,
-            [key]: {
-              ...plan,
-              lots: plan.lots.map((l) => (l.id === lotId ? { ...l, rides: l.rides.filter((r) => r.id !== rideId) } : l)),
-            },
-          };
-          return w;
-        });
-      },
-      /** How far this horse is going, what it is doing, and anything said about it. */
-      setRideDetail(when, lotId, rideId, patch) {
-        edit((w) => {
-          const [key, plan] = openPlan(w, when);
-          w.ridePlan = {
-            ...w.ridePlan,
-            [key]: {
-              ...plan,
-              lots: plan.lots.map((l) =>
-                l.id === lotId
-                  ? { ...l, rides: l.rides.map((r) => (r.id === rideId ? { ...r, ...patch } : r)) }
-                  : l
-              ),
-            },
-          };
-          return w;
-        });
-      },
-      setLots(when, lots) {
-        edit((w) => {
-          const [key, plan] = openPlan(w, when);
-          w.ridePlan = { ...(w.ridePlan || {}), [key]: { ...plan, lots } };
-          return w;
-        });
-      },
-      /** Which piece of ground this lot is working on. */
-      setLotGallop(when, lotId, gallopId) {
-        edit((w) => {
-          const [key, plan] = openPlan(w, when);
-          w.ridePlan = {
-            ...w.ridePlan,
-            [key]: { ...plan, lots: plan.lots.map((l) => (l.id === lotId ? { ...l, gallopId } : l)) },
-          };
-          return w;
-        });
-      },
 
       /* ------------------------------ the other work ------------------------ */
 
@@ -260,7 +186,7 @@ export function WorldProvider({ children }) {
 
       /**
        * Put a horse down for a job with a person, the way a horse is put under
-       * a rider: one gesture, no form. The job for that person and that kind
+       * a person: one gesture, no form. The job for that person and that kind
        * is made if it does not exist yet, and cleared away again when the last
        * horse comes off it, so the plan never fills with empty cards.
        */
@@ -367,7 +293,7 @@ export function WorldProvider({ children }) {
           const [key, plan] = openPlan(w, when);
           w.ridePlan = {
             ...(w.ridePlan || {}),
-            [key]: { ...plan, lots: plan.lots.map((l) => ({ ...l, rides: [] })), jobs: [] },
+            [key]: { ...plan, jobs: [] },
           };
           return w;
         });
@@ -389,9 +315,26 @@ export function WorldProvider({ children }) {
 
       /* --------------------------- feeding and mucking out -------------------- */
 
-      /** A worker pressed the button on the front of a box and confirmed it. */
-      logCare(stallId, animalId, kind, by) {
-        const entry = { id: uid("cr_"), at: Date.now(), stallId, animalId, kind, by: by || "Yard" };
+      /**
+       * The override. Somebody pressed the button on the front of a box and
+       * confirmed a round the camera did not call — or called late.
+       *
+       * Only what a person did is stored. What the camera recognised is
+       * derived at read time in care.js, so this log stays small even on a
+       * yard where nobody ever touches a screen.
+       */
+      logCare(stallId, animalId, kind, by, at) {
+        const entry = {
+          id: uid("cr_"),
+          // answering "yes, the camera was right" records the round at the
+          // time it happened, not at the time somebody got round to saying so
+          at: at || Date.now(),
+          stallId,
+          animalId,
+          kind,
+          by: by || "Yard",
+          source: "manual",
+        };
         edit((w) => {
           // the log is the record the yard is keeping, so it is capped rather
           // than trimmed by date — a week of a 300-box yard still fits
@@ -401,12 +344,21 @@ export function WorldProvider({ children }) {
         say(kind === "feed" ? "Feed recorded" : "Muck out recorded");
         return entry;
       },
-      undoCare(entryId) {
+      /**
+       * The other half of the override: this round did not happen, whoever
+       * said it did. A camera call is struck off in careVoid, because there is
+       * no stored row to delete — the derivation would just produce it again.
+       */
+      undoCare(entry) {
+        const id = typeof entry === "string" ? entry : entry?.id;
+        if (!id) return;
+        const fromCamera = typeof entry === "object" && entry?.source === "camera";
         edit((w) => {
-          w.careLog = (w.careLog || []).filter((e) => e.id !== entryId);
+          if (fromCamera) w.careVoid = [...(w.careVoid || []), id].slice(-4000);
+          else w.careLog = (w.careLog || []).filter((e) => e.id !== id);
           return w;
         });
-        say("Entry removed");
+        say(fromCamera ? "Camera call removed" : "Entry removed");
       },
       /** How often this horse is fed and its box done, set in the web app. */
       setCare(animalId, patch) {
@@ -591,7 +543,7 @@ export function WorldProvider({ children }) {
         });
         say("Yard removed");
       },
-      /** The lots a yard runs and the ground it works on. */
+      /** A yard's own configuration. */
       setYardConfig(yardId, patch) {
         edit((w) => {
           w.yards = w.yards.map((y) => (y.id === yardId ? { ...y, ...patch } : y));

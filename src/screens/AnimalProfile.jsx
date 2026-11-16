@@ -10,7 +10,7 @@ import AlertList from "../components/AlertList";
 import { BarChart, C, Gauge, LineChart } from "../components/charts";
 import { NoteModal } from "./Animals";
 import { useWorld } from "../lib/store";
-import { animalsOfYard, stallsOfYard } from "../lib/world";
+import { animalsOfYard, stallOfAnimal, stallsOfYard } from "../lib/world";
 import { go } from "../lib/router";
 import { ageOf } from "../lib/registry";
 import { stallAlerts, stallState } from "../lib/insights";
@@ -791,9 +791,12 @@ function CareCard({ animal, now }) {
   const [history, setHistory] = useState(false);
   const send = () => note.trim() && actions.setStallNote(animal.id, note.trim(), world.settings.operator);
 
+  const stall = stallOfAnimal(world, animal.id);
+
   const row = (kind) => {
     const c = care[kind];
     const meta = CARE[kind];
+    const waiting = (c.unsure || [])[0];
     const tone = c.complete ? "good" : c.behind >= 2 ? "serious" : c.behind ? "warning" : "flat";
     return (
       <div className="care-row" key={kind}>
@@ -807,11 +810,46 @@ function CareCard({ animal, now }) {
               {c.done} of {c.target} today
             </Pill>
             {c.behind > 0 && <Pill tone="warning">{c.behind} behind</Pill>}
+            {c.camera > 0 && (
+              <Pill tone="flat" title="Recognised by the camera over the box, with nobody having to press anything">
+                {c.camera} by camera
+              </Pill>
+            )}
+            {c.byHand > 0 && (
+              <Pill tone="flat" title="Confirmed by hand on the screen on the box front">
+                {c.byHand} by hand
+              </Pill>
+            )}
+            {waiting && (
+              <button
+                className="btn sm act"
+                title={`The camera saw something at ${hhmm(waiting.at)} but was only ${waiting.confidence}% sure`}
+                onClick={() =>
+                  stall && actions.logCare(stall.id, animal.id, kind, world.settings.operator, waiting.at)
+                }
+              >
+                <Icon name="camera" size={13} /> Camera unsure at {hhmm(waiting.at)} — confirm
+              </button>
+            )}
           </div>
-          <div className="why">
-            {c.entries.length
-              ? c.entries.map((e) => `${hhmm(e.at)} ${e.by}`).join(" · ")
-              : "Nothing recorded yet today"}
+          <div className="why care-seen">
+            {c.entries.length ? (
+              c.entries.map((e) => (
+                <span key={e.id} className="care-seen-i" title={e.source === "camera" ? `Recognised by the camera, ${e.confidence}% sure` : `Confirmed on the box by ${e.by}`}>
+                  {e.source === "camera" && <Icon name="camera" size={11} />}
+                  <span className="nums">{hhmm(e.at)}</span> {e.by}
+                  <button
+                    className="care-seen-x"
+                    title={e.source === "camera" ? "The camera was wrong — take it off" : "Remove this entry"}
+                    onClick={() => actions.undoCare(e)}
+                  >
+                    <Icon name="close" size={9} />
+                  </button>
+                </span>
+              ))
+            ) : (
+              <>Nothing recorded yet today</>
+            )}
           </div>
         </div>
         <div className="row" style={{ gap: 6 }}>

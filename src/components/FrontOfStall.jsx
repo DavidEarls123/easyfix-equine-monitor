@@ -7,11 +7,15 @@
    left, who the horse is in the middle, and two targets big enough to hit
    without looking on the right.
 
-   The two buttons are the whole point. The yard sets how many feeds and how
-   many muck-outs a horse gets in the web app; the groom presses and confirms,
-   and the system has a record of who did what and when. Everything else on the
-   panel is there so the person standing in front of it does not have to go and
-   ask someone.
+   The two targets are the whole point. The yard sets how many feeds and how
+   many muck-outs a horse gets in the web app, and the camera over the box
+   recognises most of them as they happen — so on a normal morning nobody
+   touches this screen at all and the rings fill on their own.
+
+   The buttons are the override, for the rest: a round the camera did not call
+   confidently enough, and a round it called that did not happen. Both have to
+   be possible standing in front of the box with a gloved hand, which is why
+   the correction is on the same confirm panel as the confirmation.
    ========================================================================== */
 
 import { useState } from "react";
@@ -37,8 +41,13 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
   const air = airStatus(t?.airNow, s, t?.nh3Now);
 
   const press = (kind) => setConfirm(kind);
-  const commit = () => {
-    actions.logCare(stall.id, animal.id, confirm, s.operator);
+  const commit = (at) => {
+    actions.logCare(stall.id, animal.id, confirm, s.operator, at);
+    setConfirm(null);
+  };
+  // the correction: the camera called a round that did not happen
+  const strike = (entry) => {
+    actions.undoCare(entry);
     setConfirm(null);
   };
 
@@ -127,25 +136,91 @@ export default function FrontOfStall({ stall, animal, state, now, onClose }) {
       </div>
 
       {confirm && (
-        <div className="fos-confirm" role="dialog" aria-label="Confirm">
-          <div className="fos-confirm-box">
-            <Icon name={CARE[confirm].icon} size={40} />
-            <h3>{CARE[confirm].label}</h3>
-            <p>
-              Record a {confirm === "feed" ? "feed" : "muck out"} for <b>{animal.name}</b> in {stall.name}, now, as{" "}
-              <b>{s.operator}</b>?
-            </p>
-            <div className="fos-confirm-acts">
-              <button className="fos-btn ghost" onClick={() => setConfirm(null)}>
-                Cancel
-              </button>
-              <button className="fos-btn go" onClick={commit}>
-                <Icon name="check" size={20} /> Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+        <Confirm
+          kind={confirm}
+          c={care[confirm]}
+          animal={animal}
+          stall={stall}
+          by={s.operator}
+          onCancel={() => setConfirm(null)}
+          onCommit={commit}
+          onStrike={strike}
+        />
       )}
+    </div>
+  );
+}
+
+/**
+ * The confirm panel, which does both halves of the override.
+ *
+ * It opens on what the box already has on it today and where each round came
+ * from, because somebody standing here with the ring half full needs to know
+ * whether the camera has it before they add another one.
+ */
+function Confirm({ kind, c, animal, stall, by, onCancel, onCommit, onStrike }) {
+  const meta = CARE[kind];
+  const lastCamera = [...c.entries].reverse().find((e) => e.source === "camera");
+  // the round the camera half-saw: the commonest reason anybody presses this
+  const waiting = c.unsure?.[0] || null;
+
+  return (
+    <div className="fos-confirm" role="dialog" aria-label="Confirm">
+      <div className="fos-confirm-box">
+        <Icon name={meta.icon} size={40} />
+        <h3>{meta.label}</h3>
+        {waiting ? (
+          <p>
+            The camera thinks it saw this at <b className="nums">{hhmm(waiting.at)}</b> but is only{" "}
+            <b>{waiting.confidence}%</b> sure, so it has not counted it. Was <b>{animal.name}</b>{" "}
+            {kind === "feed" ? "fed" : "done"}?
+          </p>
+        ) : (
+          <p>
+            Record a {kind === "feed" ? "feed" : "muck out"} for <b>{animal.name}</b> in {stall.name}, now, as{" "}
+            <b>{by}</b>?
+          </p>
+        )}
+
+        {(c.entries.length > 0 || c.unsure?.length > 0) && (
+          <ul className="fos-seen">
+            {c.entries.map((e) => (
+              <li key={e.id}>
+                <Icon name={e.source === "camera" ? "camera" : "check"} size={16} />
+                <b className="nums">{hhmm(e.at)}</b>
+                <span>{e.source === "camera" ? `Camera · ${e.confidence}% sure` : e.by}</span>
+              </li>
+            ))}
+            {(c.unsure || []).map((e) => (
+              <li key={e.id} className="unsure">
+                <Icon name="camera" size={16} />
+                <b className="nums">{hhmm(e.at)}</b>
+                <span>Camera · {e.confidence}% sure — not counted</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!c.entries.length && !c.unsure?.length && (
+          <p className="fos-seen-none">
+            Nothing recorded for this box today — the camera has not seen one and nobody has confirmed one.
+          </p>
+        )}
+
+        <div className="fos-confirm-acts">
+          <button className="fos-btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="fos-btn go" onClick={() => onCommit(waiting?.at)}>
+            <Icon name="check" size={20} /> {waiting ? "Yes, it was done" : "Confirm"}
+          </button>
+        </div>
+
+        {lastCamera && (
+          <button className="fos-undo" onClick={() => onStrike(lastCamera)}>
+            <Icon name="close" size={15} /> The camera is wrong — {hhmm(lastCamera.at)} did not happen
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -169,11 +244,12 @@ function Task({ kind, c, onPress }) {
   const pct = c.target ? Math.min(1, c.done / c.target) : 0;
   const r = 44;
   const circ = 2 * Math.PI * r;
+  const waiting = (c.unsure || []).length;
   const tone = c.complete ? "done" : c.behind ? "behind" : "open";
   const next = c.nextDue != null ? dueTimes(c.target)[c.done] : null;
 
   return (
-    <button className={`fos-task ${tone}`} onClick={() => onPress(kind)} aria-label={`${meta.label}, ${c.done} of ${c.target} done`}>
+    <button className={`fos-task ${tone}${waiting ? " asking" : ""}`} onClick={() => onPress(kind)} aria-label={`${meta.label}, ${c.done} of ${c.target} done`}>
       <svg viewBox="0 0 100 100" className="fos-ring" aria-hidden="true">
         <circle cx="50" cy="50" r={r} className="track" />
         {pct > 0 && (
@@ -196,7 +272,11 @@ function Task({ kind, c, onPress }) {
           <i>/{c.target}</i>
         </span>
         <span className="fos-task-note">
-          {c.complete ? meta.done : c.behind ? `${c.behind} behind` : meta.label}
+          {waiting ? "Confirm?" : c.complete ? meta.done : c.behind ? `${c.behind} behind` : meta.label}
+          {/* the camera is keeping this box, so the ring filled on its own */}
+          {(c.camera > 0 || waiting > 0) && (
+            <Icon name="camera" size={11} title={waiting ? "The camera is not sure — confirm on the box" : `${c.camera} seen by the camera`} />
+          )}
         </span>
       </span>
       <span className="fos-task-label">
@@ -208,7 +288,12 @@ function Task({ kind, c, onPress }) {
           ? `Next due ${String(Math.floor(next)).padStart(2, "0")}:${String(Math.round((next % 1) * 60)).padStart(2, "0")}`
           : meta.label}
       </span>
-      {c.last && <span className="fos-task-last">Last {hhmm(c.last.at)} · {c.last.by}</span>}
+      {c.last && (
+        <span className="fos-task-last">
+          {c.last.source === "camera" && <Icon name="camera" size={13} />}
+          Last {hhmm(c.last.at)} · {c.last.by}
+        </span>
+      )}
     </button>
   );
 }

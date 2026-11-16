@@ -195,7 +195,7 @@ function Overview({ roll, alerts, now, snap, onAssign, onRename }) {
       </div>
 
       <div className="grid">
-        <Card title="Rounds today" sub="Mucking out and feeding, off the screens on the box fronts">
+        <Card title="Rounds today" sub="Mucking out and feeding, as the cameras see them and the box screens confirm them">
           <BarnRounds barnId={roll.barn.id} />
         </Card>
 

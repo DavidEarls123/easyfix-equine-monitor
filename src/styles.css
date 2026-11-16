@@ -741,9 +741,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .fos-task-count i { font-style: normal; font-size: 14px; opacity: 0.65; }
 .fos-task-label, .fos-task-last { display: none; }
 .fos-task-meta { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
-.fos-task-note { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.8; white-space: nowrap; }
+.fos-task-note {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.8; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.fos-task-note svg { opacity: 0.85; }
 .fos-task.done .fos-task-note { color: #8ff0b4; opacity: 1; }
 .fos-task.behind .fos-task-note { color: #ffd98a; opacity: 1; }
+/* the camera saw something it could not swear to: the box is asking, not nagging */
+.fos-task.asking .fos-task-note { color: #9ad4ff; opacity: 1; }
+.fos-task.asking .fos-ring .fill { stroke: #6fb4ff; }
 
 .fos-menu { background: none; border: 0; cursor: pointer; display: flex; gap: 3px; align-items: center; padding: 0 2px 0 18px; }
 .fos-menu span { width: 3px; height: 19px; background: #cfe0ff; border-radius: 2px; }
@@ -767,6 +774,25 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .fos-btn.go { background: #2fc46a; color: #04240f; }
 .fos-btn.ghost { background: rgba(255, 255, 255, 0.15); color: #fff; }
 
+/* what the box already has on it today, and where each round came from */
+.fos-seen {
+  list-style: none; margin: 0 0 16px; padding: 10px 12px; text-align: left;
+  background: rgba(0, 0, 0, 0.22); border-radius: 11px; display: grid; gap: 6px;
+}
+.fos-seen li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #e4edff; }
+.fos-seen li svg { flex: none; opacity: 0.85; }
+.fos-seen li b { font-size: 14px; white-space: nowrap; }
+.fos-seen li span { opacity: 0.8; }
+.fos-seen li.unsure { color: #ffd98a; }
+.fos-seen li.unsure b, .fos-seen li.unsure span { opacity: 0.95; }
+.fos-seen-none { font-size: 13px; opacity: 0.8; }
+.fos-undo {
+  margin-top: 14px; width: 100%; background: none; border: 0; cursor: pointer;
+  color: #ffb4b4; font-size: 12.5px; font-weight: 700; padding: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.fos-undo:hover { color: #ff8e8e; }
+
 /* the panel scales down with its container rather than reflowing */
 @container (max-width: 700px) {
   .fos-screen { grid-template-columns: 92px minmax(0, 1fr); }
@@ -782,6 +808,15 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   .fos-facts dt { min-width: 48px; }
 }
 .care-row { display: flex; gap: 11px; align-items: center; }
+.care-seen { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.care-seen-i { display: inline-flex; align-items: center; gap: 4px; }
+.care-seen-i svg { opacity: 0.7; }
+.care-seen-x {
+  background: none; border: 0; cursor: pointer; color: var(--mute); padding: 1px 2px;
+  display: inline-flex; border-radius: 4px; opacity: 0;
+}
+.care-seen-i:hover .care-seen-x { opacity: 1; }
+.care-seen-x:hover { color: var(--bad); background: rgba(208, 59, 59, 0.12); }
 
 /* ==========================================================================
    The screen on the barn door.

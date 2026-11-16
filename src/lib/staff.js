@@ -28,4 +28,4 @@ export const inGroup = (person, groupId) => (person.groups || []).includes(group
 export const staffIn = (staff, groupId) =>
   (staff || []).filter((p) => !groupId || groupId === "all" || inGroup(p, groupId));
 
-export { availableRiders, messageStamp } from "./jobs";
+export { messageStamp } from "./jobs";
