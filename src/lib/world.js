@@ -16,7 +16,7 @@ import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, emptyPlan, planKey } from "./jobs";
 
 
-export const VERSION = 17;
+export const VERSION = 18;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -306,14 +306,19 @@ export function animalFromRecord(rec, extra = {}) {
    of each thing worth catching, named so the walkthrough is repeatable. Every
    one of these is a box or a meter, never the horse itself. */
 const BARN1 = [
-  ["Comanche Brave", "sensorOffline"],
-  ["A Boy Named Susie", "normal"],
-  ["Balantina", "lowIntake"],
-  ["Dee's Funny Girl", "normal"],
-  ["Where Love Lives", "normal"],
-  ["Shaihaan", "poorAir"],
-  ["Glyfada", "hot"],
-  ["Josh's Joy", "normal"],
+  ["Fiveonefive", "sensorOffline"],
+  ["Golden Joy", "normal"],
+  ["Kashchei", "lowIntake"],
+  ["Blue Reed", "normal"],
+  ["Affinity Rock", "normal"],
+  ["Hi Ho Idaho", "poorAir"],
+  ["Brandt", "hot"],
+  ["Impero", "normal"],
+  ["Local Resident", "normal"],
+  ["Sporting Glance", "normal"],
+  ["Secret Rock", "normal"],
+  ["Chantilly Wings", "normal"],
+  ["Codger's Rock", "normal"],
 ];
 
 /** A yard as the operator sets one up. A yard is a place with barns in it. */
@@ -366,15 +371,17 @@ export function seedWorld() {
     return barn;
   };
 
-  const b1 = addBarn("Barn 1", 20);
-  const b2 = addBarn("Barn 2", 12);
-  const b3 = addBarn("Barn 3", 20);
+  const b1 = addBarn("Barn 1", 14);
+  const b2 = addBarn("Barn 2", 10);
+  const b3 = addBarn("Barn 3", 8);
   ["Barn 4", "Barn 5", "Barn 6", "Barn 7", "Barn 8", "Barn 9"].forEach((nm) => addBarn(nm, 0, false));
 
   /* How full the working barns are kept. A yard is not run at a hundred per
      cent: a box is always coming free as something goes out or comes back, and
      a demo with every door shut has nowhere to put a horse. All three working
-     barns sit at nine tenths, which is 47 of the 52 boxes. */
+     barns sit at nine tenths, which is 29 of the 32 boxes — and the three
+     barns are sized to the string rather than the other way round, because a
+     jumps yard of thirty horses does not build fifty boxes. */
   const FULL = 0.9;
   const boxesIn = (barn) => stallsOf(world, barn.id).length;
   const takes = (barn) => Math.round(boxesIn(barn) * FULL);
@@ -394,21 +401,22 @@ export function seedWorld() {
     s1[i].animalId = animal.id;
   });
 
-  // Two of them were moved between boxes without anyone updating the app — the
-  // camera notices, which is the identity check the product is sold on.
-  const bright = world.animals.find((a) => a.name === "Where Love Lives");
-  const cash = world.animals.find((a) => a.name === "Dee's Funny Girl");
+  /* Two of them were moved between boxes without anyone updating the app — the
+     camera notices, which is the identity check the product is sold on. These
+     two are the hard case on purpose: both bay geldings, both carrying the
+     Wise Venture colours, and nobody walking the aisle would spot it. */
+  const bright = world.animals.find((a) => a.name === "Hi Ho Idaho");
+  const cash = world.animals.find((a) => a.name === "Local Resident");
   if (bright && cash) {
     bright.seenAs = cash.id;
     cash.seenAs = bright.id;
   }
 
   /* The rest of the boxes are filled from the passport index, mostly settled.
-     The index is in order — the string in training first, then the made-up
-     horses — so the real ones go in before anything invented is reached for,
-     and whatever is not needed stays in the index to be imported later. */
+     A horse that has died stays in the index but never goes in a box, and
+     whatever is not needed stays there to be imported later. */
   const housed = new Set(world.animals.map((a) => a.name));
-  const pool = REGISTRY.filter((r) => !housed.has(r.name));
+  const pool = REGISTRY.filter((r) => !housed.has(r.name) && !r.deceased);
   let p = 0;
   const fill = (barn, count, yardId) => {
     const stalls = stallsOf(world, barn.id)
@@ -432,8 +440,8 @@ export function seedWorld() {
   fill(b2, takes(b2), main.id);
   fill(b3, takes(b3), main.id);
 
-  /* The second yard is laid out and standing empty — this year's crop has not
-     come in yet. It is here to show the app handles a second yard, so it has
+  /* The second yard is laid out and standing empty — nothing has gone up
+     there yet. It is here to show the app handles a second yard, so it has
      boxes to put horses in rather than horses in them. */
   addBarn("Barn 1", 16, true, hill.id);
   addBarn("Barn 2", 0, false, hill.id);

@@ -4,70 +4,50 @@
    An owner is a record rather than a line of text on a horse, for two reasons
    the yard cares about every day.
 
-   The first is filtering. "Show me everything Skara Glen has" has to mean the
-   same thing whether the horse was entered as "Skara Glen Stables" or
-   "Skara Glen Stables ". A horse points at an owner by id, so a filter is an
-   identity check and the count beside it is right.
+   The first is filtering. "Show me everything the Del Boy Partnership has" has
+   to mean the same thing whether the horse was entered as "Del Boy
+   Partnership" or "Del Boy Partnership ". A horse points at an owner by id, so
+   a filter is an identity check and the count beside it is right.
 
    The second is colours. Colours are registered to an owner, and every horse
    that owner has runs in them — so the set lives on the owner, not the horse.
-   Several owners can carry the same registered set through a partnership, and
-   in this string three do: the Medallion/Weston claret and navy runs under
-   three different partnership names, the Reeves green diamond under two, and
-   the Fowler blue and white cross under two. A horse may still override its
+   Several owners can carry the same registered set, and in this string two do:
+   the Giannini yellow and green star runs under both the Giannini/Lagan
+   partnership and Salvo Giannini's own name. A horse may still override its
    own set, which is what the field on its profile is for.
+
+   Four owners here have more than one horse in the yard — Del Boy and Kevin
+   McConnell have three each, Wise Venture and Mark Hatton two — so a groom
+   reading a set off a box front will see the same colours again down the barn.
    ========================================================================== */
 
 import { silksSet } from "./silks-sets";
 
 export const OWNERS = [
-  { id: "almuhaideb", name: "Muhaideb A Almuhaideb", silks: "almuhaideb" },
-  { id: "ana-obrien", name: "Ana O'Brien", silks: "ana-obrien" },
-  { id: "weston-medallion-reeves", name: "S I Weston/Medallion Racing LLC/Reeves T'bred/L A McNulty", silks: "weston-pt" },
-  { id: "medallion-weston-trommer-fowler", name: "Medallion, Weston, Trommer, Fowler", silks: "medallion" },
-  { id: "trc", name: "The Thoroughbred Racing Corporation Ltd", silks: "trc" },
-  { id: "al-shaqab", name: "Al Shaqab Racing", silks: "al-shaqab" },
-  { id: "skara-glen", name: "Skara Glen Stables", silks: "skara-glen" },
-  { id: "orr-medallion-hoffman-weston", name: "Orr, Medallion, Hoffman & Weston", silks: "orr" },
-  { id: "al-wasmiyah", name: "Al Wasmiyah Stud", silks: "al-wasmiyah" },
-  { id: "hoffman-medallion-shanahan-magnier", name: "Hoffman, Medallion, Shanahan & Magnier", silks: "hoffman" },
-  { id: "eclipse-gaynor-gallagher", name: "Eclipse T'bred Partners/Gaynor Bloodstock LLC/F Gallagher", silks: "eclipse" },
-  { id: "reeves-blake-flexford", name: "ReevesTB Racing, K Blake, Flexford P'ners", silks: "reeves" },
-  { id: "medallion-swinbank", name: "MedallionSwinbank BTypeMcStantonWeston", silks: "medallion" },
-  { id: "lissa-mcnulty", name: "Lissa Ann McNulty", silks: "mcnulty" },
-  { id: "gillian-khosla", name: "Ms Gillian Khosla", silks: "khosla" },
-  { id: "smith-magnier-tabor-westerberg", name: "Derrick Smith/Mrs John Magnier/Michael Tabor/Westerberg", silks: "coolmore-purple" },
-  { id: "agave-medallion-trommer", name: "Agave Racing Stable, Medallion Racing & Evan Trommer", silks: "agave" },
-  { id: "fw-lynch", name: "F W Lynch", silks: "lynch" },
-  { id: "magnier-oloughlin-byrne", name: "Mrs M V Magnier, Mrs O'Loughlin, Mrs Byrne", silks: "magnier-navy" },
-  { id: "barry-fowler", name: "Barry Fowler", silks: "fowler" },
-  { id: "henry-magnier", name: "Mrs Richard Henry & Mrs John Magnier", silks: "henry-magnier" },
-  { id: "dalmook", name: "Sheikh Hamed Dalmook Al Maktoum", silks: "dalmook" },
-  { id: "am-obrien", name: "Mrs A M O'Brien", silks: "am-obrien" },
-  { id: "p-smith-partners", name: "P Smith, Magnier, Tabor, D Smith, Westerberg", silks: "smith-magnier" },
-  { id: "medallion-kisber", name: "Medallion Racing, Kisber Et Al", silks: "medallion" },
-  { id: "tabor-smith-magnier-westerberg", name: "M Tabor & D Smith & Mrs J Magnier & Westerberg", silks: "tabor-smith" },
-  { id: "reeves-fowler", name: "Reeves Thoroughbred Racing & Barry Fowler", silks: "reeves" },
-  { id: "fowler-oxley-casse", name: "Fowler, Oxley, Casse, Berk & Romano", silks: "fowler" },
-  { id: "magnier-tabor-smith-westerberg", name: "Mrs John Magnier/Michael Tabor/Derrick Smith/Westerberg", silks: "navy" },
-  { id: "joseph-allen", name: "Joseph Allen LLC", silks: "allen" },
-  { id: "magnier-tabor-smith", name: "Mrs John Magnier & Michael Tabor & Derrick Smith", silks: "navy" },
-  { id: "cheeky-pups", name: "The Cheeky Pups", silks: "cheeky-pups" },
-  { id: "al-attiyah", name: "Abdullah Fahad Al Attiyah", silks: "al-attiyah" },
-  { id: "smith-magnier-tabor", name: "Derrick Smith & Mrs John Magnier & Michael Tabor", silks: "coolmore-purple" },
-  { id: "p-boyle", name: "P Boyle", silks: "boyle" },
-  { id: "brook-smith", name: "Brook T Smith", silks: "brook-smith" },
-  { id: "hugh-brunton", name: "Hugh Brunton", silks: "brunton" },
-
-  /* The yearling yard. These owners are invented, as are their colours — the
-     yard is a demonstration of a second string rather than a real one. */
-  { id: "bawnmore-bloodstock", name: "Bawnmore Bloodstock", silks: "bawnmore-bloodstock" },
-  { id: "clonard-partnership", name: "The Clonard Partnership", silks: "clonard" },
-  { id: "ardglass-stud", name: "Ardglass Stud", silks: "ardglass" },
-  { id: "keane-mcgrath", name: "Keane & McGrath", silks: "keane-mcgrath" },
-  { id: "riverfield", name: "Riverfield Racing Club", silks: "riverfield" },
-  { id: "two-furlong", name: "The Two Furlong Syndicate", silks: "two-furlong" },
-  { id: "slaneyside", name: "Slaneyside Bloodstock", silks: "slaneyside" },
+  { id: "giannini-lagan", name: "Salvatore Giannini & Tony Lagan", silks: "giannini" },
+  { id: "salvo-giannini", name: "Salvo Giannini", silks: "giannini" },
+  { id: "mark-hatton", name: "Mark Hatton", silks: "hatton" },
+  { id: "six-degenerates", name: "Six Degenerates Syndicate", silks: "six-degenerates" },
+  { id: "rocket", name: "Rocket Syndicate", silks: "rocket" },
+  { id: "friends-low-places", name: "Friends In Low Places Syndicate", silks: "friends-low-places" },
+  { id: "wise-venture", name: "Wise Venture Partnership", silks: "wise-venture" },
+  { id: "del-boy", name: "Del Boy Partnership", silks: "del-boy" },
+  { id: "angie-osullivan", name: "Angie O'Sullivan", silks: "osullivan" },
+  { id: "kevin-mcconnell", name: "Kevin McConnell", silks: "mcconnell" },
+  { id: "country-ways", name: "Country Ways Syndicate", silks: "country-ways" },
+  { id: "john-lynch", name: "John M Lynch", silks: "john-lynch" },
+  { id: "breslin-larkin", name: "John Breslin & Mike Larkin", silks: "breslin-larkin" },
+  { id: "william-devereux", name: "William Devereux", silks: "william-devereux" },
+  { id: "finnegan-osullivan", name: "Paul A Finnegan & Michael C Finnegan & Pat O'Sullivan", silks: "finnegan-osullivan" },
+  { id: "feathery-step", name: "Feathery Step Syndicate", silks: "feathery-step" },
+  { id: "lucie-glynn", name: "Lucie Glynn", silks: "lucie-glynn" },
+  { id: "barry-logan", name: "Barry Logan", silks: "barry-logan" },
+  { id: "joe-gregg", name: "Joe Gregg", silks: "joe-gregg" },
+  { id: "top-man", name: "Top Man Racing Syndicate", silks: "top-man" },
+  { id: "we-win", name: "We Win Racing Syndicate", silks: "we-win" },
+  { id: "cian-collins", name: "Cian Collins", silks: "cian-collins" },
+  { id: "adam-lord", name: "Adam Lord", silks: "adam-lord" },
+  { id: "tb-sheridan", name: "T B Sheridan", silks: "tb-sheridan" },
 ];
 
 export const ownerById = (id) => OWNERS.find((o) => o.id === id) || null;
