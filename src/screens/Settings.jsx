@@ -12,6 +12,7 @@ import { DEFAULT_CARE } from "../lib/care";
 import { HORSE_STYLES } from "../lib/horse-style";
 import { behaviourAt } from "../lib/sim";
 import CameraView from "../components/CameraView";
+import WallDisplay from "../components/WallDisplay";
 import { useWorld } from "../lib/store";
 import { DEFAULT_ACTIVITIES, activitiesOf } from "../lib/jobs";
 import { barnsOfYard, bigYard, currentYard } from "../lib/world";
@@ -20,6 +21,7 @@ export default function Settings({ snap }) {
   const { world, actions, say } = useWorld();
   const s = world.settings;
   const [confirm, setConfirm] = useState(null);
+  const [bigScreen, setBigScreen] = useState(false);
 
   const num = (key, label, hint, min, max, step = 1) => (
     <Field label={label} hint={hint}>
@@ -57,7 +59,14 @@ export default function Settings({ snap }) {
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", alignItems: "start" }}>
         <Card title="Operator">
           <div className="grid" style={{ gap: 12 }}>
-            <Field label="Operator">
+            <Field label="Yard name" hint="What goes on the screens the staff and the owners read">
+              <input
+                className="inp"
+                value={s.business || ""}
+                onChange={(e) => actions.setSettings({ business: e.target.value })}
+              />
+            </Field>
+            <Field label="Operator" hint="Whoever is signed in — this is the name a confirmed round is recorded under">
               <input className="inp" value={s.operator} onChange={(e) => actions.setSettings({ operator: e.target.value })} />
             </Field>
             <Field label="Contact email">
@@ -94,6 +103,25 @@ export default function Settings({ snap }) {
 
         <Card title="How the horse is drawn" sub="The same animal and the same behaviour — only the finish changes">
           <HorseStylePicker />
+        </Card>
+
+        <Card
+          title="Barn display"
+          sub="The screen at the end of the barn — eight boxes, their breeding and their readings"
+          style={{ gridColumn: "1 / -1" }}
+          right={
+            <button className="btn sm" onClick={() => setBigScreen(true)}>
+              <Icon name="screen" size={14} /> Show it full size
+            </button>
+          }
+        >
+          <WallDisplay live={snap.live} now={snap.now} settings={s} />
+          <div className="hint" style={{ marginTop: 12, lineHeight: 1.7 }}>
+            Nobody operates this one: it hangs on the wall and rolls on its own. It carries whichever eight boxes it
+            is pointed at, with what each horse is bred from and the three figures a yard argues about — air quality,
+            what it has drunk today, and the temperature in the box. A figure only takes a colour when it is outside
+            the band set further down this page.
+          </div>
         </Card>
 
         <Card title="AI camera">
@@ -240,6 +268,12 @@ export default function Settings({ snap }) {
           </div>
         </Card>
       </div>
+
+      {bigScreen && (
+        <Modal title="Barn display" wide className="display" onClose={() => setBigScreen(false)}>
+          <WallDisplay live={snap.live} now={snap.now} settings={s} />
+        </Modal>
+      )}
 
       {confirm && (
         <Modal

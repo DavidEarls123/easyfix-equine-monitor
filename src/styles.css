@@ -1395,3 +1395,92 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .layout-grid.moving .cell.stall:active { cursor: grabbing; }
 .layout-grid.moving .cell.movable:hover { outline: 2px solid var(--blue); outline-offset: -2px; }
 .layout-grid .cell.lifted { outline: 2px dashed var(--blue); outline-offset: -2px; opacity: 0.6; }
+
+/* ==========================================================================
+   The screen at the end of the barn.
+
+   A television on a wall, drawn at 16:9 and scaled by its container, so the
+   same markup is a thumbnail in settings and a wall in a barn. Everything
+   inside is sized in cqi — a share of the screen's own width — so it holds
+   its proportions at any size rather than reflowing into a phone layout.
+   ========================================================================== */
+
+/* shown on its own, the mock-up takes the room a television would */
+.modal.display { width: min(95vw, 1600px); max-width: none; }
+
+.wall {
+  container-type: inline-size;
+  background: #15617f;
+  border-radius: 10px;
+  padding: 2.2cqi;
+  aspect-ratio: 16 / 9;
+}
+.wall-screen {
+  background: #d4d4d4;
+  border-radius: 8px;
+  height: 100%;
+  padding: 2cqi 2.4cqi 2.4cqi;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8cqi;
+}
+
+.wall-hd { display: flex; align-items: center; gap: 2.5cqi; }
+.wall-plate {
+  display: inline-flex; align-items: center; flex: none;
+  background: #0c2340; border-radius: 0.9cqi; padding: 0.9cqi 1.2cqi;
+}
+.wall-logo { height: 3.6cqi; width: auto; display: block; }
+.wall-name {
+  font-size: 3.1cqi; font-weight: 800; letter-spacing: -0.02em; color: #10263b;
+  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wall-when { margin-left: auto; text-align: right; line-height: 1.25; }
+.wall-date { display: block; font-size: 1.5cqi; font-weight: 600; color: #4a5a6a; }
+.wall-time { display: block; font-size: 2.9cqi; font-weight: 800; color: #10263b; }
+
+.wall-grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 1fr);
+  gap: 1.8cqi;
+}
+.wall-card {
+  background: #fff; border: 0.26cqi solid #1a1a1a; border-radius: 1.4cqi;
+  padding: 1.3cqi 1.4cqi 1.2cqi;
+  display: flex; flex-direction: column; gap: 0.9cqi; min-width: 0;
+}
+.wall-card h3 {
+  font-size: 2.1cqi; font-weight: 800; text-align: center; color: #10263b;
+  margin: 0; min-width: 0;
+}
+.wall-card.empty { justify-content: center; border-style: dashed; border-color: #9aa5ae; }
+.wall-card.empty h3 { color: #9aa5ae; font-weight: 700; }
+
+.wall-mid { display: flex; align-items: center; gap: 1cqi; flex: 1; min-height: 0; min-width: 0; }
+.wall-bred { flex: 1; min-width: 0; display: grid; gap: 0.35cqi; margin: 0; }
+.wall-bred div { min-width: 0; }
+.wall-bred dt {
+  font-size: 1.05cqi; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #8793a0;
+}
+.wall-bred dd {
+  font-size: 1.45cqi; font-weight: 600; color: #1d2b3a; margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wall-mid .silks { flex: none; }
+
+.wall-reads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8cqi; }
+.wall-read {
+  border: 0.22cqi solid #1a1a1a; border-radius: 0.7cqi; padding: 0.5cqi 0.2cqi 0.4cqi;
+  text-align: center; background: #fff;
+}
+.wall-read-v { display: block; font-size: 1.9cqi; font-weight: 800; color: #10263b; line-height: 1.1; }
+.wall-read-l {
+  display: block; font-size: 1.05cqi; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #8793a0;
+}
+/* a figure only takes a colour when it is outside the band the yard set */
+.wall-read.warning { border-color: #c98a00; background: #fff8e6; }
+.wall-read.warning .wall-read-v { color: #8a5d00; }
+.wall-read.serious, .wall-read.critical { border-color: #c0392b; background: #fdeceb; }
+.wall-read.serious .wall-read-v, .wall-read.critical .wall-read-v { color: #9c2a1e; }

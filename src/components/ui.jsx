@@ -126,7 +126,7 @@ export function Empty({ icon = "note", children }) {
   );
 }
 
-export function Modal({ title, onClose, children, footer, wide }) {
+export function Modal({ title, onClose, children, footer, wide, className = "" }) {
   useEffect(() => {
     const esc = (e) => e.key === "Escape" && onClose?.();
     window.addEventListener("keydown", esc);
@@ -134,7 +134,7 @@ export function Modal({ title, onClose, children, footer, wide }) {
   }, [onClose]);
   return (
     <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
-      <div className={`modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={`modal ${wide ? "wide" : ""} ${className}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-hd">
           <h3>{title}</h3>
           <button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={onClose} aria-label="Close">

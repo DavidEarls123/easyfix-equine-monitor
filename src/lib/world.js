@@ -16,7 +16,7 @@ import { DEFAULT_HORSE_STYLE } from "./horse-style";
 import { DEFAULT_ACTIVITIES, emptyPlan, planKey } from "./jobs";
 
 
-export const VERSION = 18;
+export const VERSION = 19;
 
 export const CELL = {
   stall: { label: "Stall", hint: "A monitored box" },
@@ -31,6 +31,9 @@ export const CELL = {
 export const DEFAULT_SETTINGS = {
   yardLabel: "Yard 1",
   operator: "Super Admin",
+  // the name the yard trades under, which is what goes on the screens the
+  // owners and the staff read — not the name of whoever is signed in
+  business: "Cian Collins Racing",
   email: "superadmin@easyfix.com",
   tempMin: 5,
   tempMax: 25,
