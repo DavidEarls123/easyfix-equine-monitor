@@ -90,7 +90,9 @@ function Box({ stall, animal, today, settings }) {
             <dd>{bred(animal?.damSire, animal?.damSireCountry)}</dd>
           </div>
         </dl>
-        <Silks animal={animal} size={52} />
+        <span className="wall-silks">
+          <Silks animal={animal} size={52} />
+        </span>
       </div>
 
       <div className="wall-reads">

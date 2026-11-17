@@ -1403,80 +1403,91 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
    same markup is a thumbnail in settings and a wall in a barn. Everything
    inside is sized in cqi — a share of the screen's own width — so it holds
    its proportions at any size rather than reflowing into a phone layout.
-   ========================================================================== */
 
-/* shown on its own, the mock-up takes the room a television would */
-.modal.display { width: min(95vw, 1600px); max-width: none; }
+   Because the frame is a fixed 16:9, the eight cards have to FIT it rather
+   than push it out of shape: a card that is one line too tall climbs out of
+   the grey panel and sits on the bezel. So every text run here carries an
+   explicit line-height, the two rows are allowed to shrink (min-height: 0,
+   which a grid item does not do on its own), and the sizes below are set so
+   a card comes to a little under the row it is given.
+   ========================================================================== */
 
 .wall {
   container-type: inline-size;
   background: #15617f;
   border-radius: 10px;
-  padding: 2.2cqi;
+  padding: 1.8cqi;
   aspect-ratio: 16 / 9;
 }
 .wall-screen {
   background: #d4d4d4;
   border-radius: 8px;
   height: 100%;
-  padding: 2cqi 2.4cqi 2.4cqi;
+  padding: 1.9cqi 2.2cqi 2cqi;
   display: flex;
   flex-direction: column;
-  gap: 1.8cqi;
+  gap: 1.6cqi;
+  overflow: hidden;
 }
 
-.wall-hd { display: flex; align-items: center; gap: 2.5cqi; }
+.wall-hd { display: flex; align-items: center; gap: 2.4cqi; flex: none; }
 .wall-plate {
   display: inline-flex; align-items: center; flex: none;
-  background: #0c2340; border-radius: 0.9cqi; padding: 0.9cqi 1.2cqi;
+  background: #0c2340; border-radius: 0.8cqi; padding: 0.75cqi 1.1cqi;
 }
-.wall-logo { height: 3.6cqi; width: auto; display: block; }
+.wall-logo { height: 3.2cqi; width: auto; display: block; }
 .wall-name {
-  font-size: 3.1cqi; font-weight: 800; letter-spacing: -0.02em; color: #10263b;
-  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 3cqi; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em;
+  color: #10263b; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.wall-when { margin-left: auto; text-align: right; line-height: 1.25; }
-.wall-date { display: block; font-size: 1.5cqi; font-weight: 600; color: #4a5a6a; }
-.wall-time { display: block; font-size: 2.9cqi; font-weight: 800; color: #10263b; }
+.wall-when { margin-left: auto; text-align: right; flex: none; }
+.wall-date { display: block; font-size: 1.45cqi; line-height: 1.3; font-weight: 600; color: #4a5a6a; }
+.wall-time { display: block; font-size: 2.8cqi; line-height: 1.15; font-weight: 800; color: #10263b; }
 
 .wall-grid {
   flex: 1; min-height: 0;
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 1fr);
-  gap: 1.8cqi;
+  gap: 1.6cqi;
 }
 .wall-card {
-  background: #fff; border: 0.26cqi solid #1a1a1a; border-radius: 1.4cqi;
-  padding: 1.3cqi 1.4cqi 1.2cqi;
-  display: flex; flex-direction: column; gap: 0.9cqi; min-width: 0;
+  background: #fff; border: 0.26cqi solid #1a1a1a; border-radius: 1.3cqi;
+  padding: 1.1cqi 1.2cqi 1cqi;
+  display: flex; flex-direction: column; gap: 0.7cqi;
+  /* a grid item will not shrink below its content unless it is told it may */
+  min-width: 0; min-height: 0; overflow: hidden;
 }
 .wall-card h3 {
-  font-size: 2.1cqi; font-weight: 800; text-align: center; color: #10263b;
-  margin: 0; min-width: 0;
+  font-size: 2cqi; line-height: 1.15; font-weight: 800; text-align: center; color: #10263b;
+  margin: 0; min-width: 0; flex: none;
 }
 .wall-card.empty { justify-content: center; border-style: dashed; border-color: #9aa5ae; }
 .wall-card.empty h3 { color: #9aa5ae; font-weight: 700; }
 
-.wall-mid { display: flex; align-items: center; gap: 1cqi; flex: 1; min-height: 0; min-width: 0; }
-.wall-bred { flex: 1; min-width: 0; display: grid; gap: 0.35cqi; margin: 0; }
+.wall-mid { display: flex; align-items: center; gap: 0.9cqi; flex: 1; min-height: 0; min-width: 0; }
+.wall-bred { flex: 1; min-width: 0; min-height: 0; display: grid; gap: 0.28cqi; margin: 0; }
 .wall-bred div { min-width: 0; }
 .wall-bred dt {
-  font-size: 1.05cqi; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: #8793a0;
+  font-size: 1cqi; line-height: 1.2; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #8793a0;
 }
 .wall-bred dd {
-  font-size: 1.45cqi; font-weight: 600; color: #1d2b3a; margin: 0;
+  font-size: 1.38cqi; line-height: 1.25; font-weight: 600; color: #1d2b3a; margin: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.wall-mid .silks { flex: none; }
+/* the colours are drawn at a pixel size, which would not scale with a screen
+   that is sized as a share of its own width — so the wall sets the size and
+   overrides what the drawing asked for */
+.wall-silks { width: 5.3cqi; flex: none; display: flex; align-items: center; }
+.wall-silks > * { width: 100% !important; height: auto !important; }
 
-.wall-reads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8cqi; }
+.wall-reads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7cqi; flex: none; }
 .wall-read {
-  border: 0.22cqi solid #1a1a1a; border-radius: 0.7cqi; padding: 0.5cqi 0.2cqi 0.4cqi;
+  border: 0.22cqi solid #1a1a1a; border-radius: 0.65cqi; padding: 0.45cqi 0.2cqi 0.35cqi;
   text-align: center; background: #fff;
 }
-.wall-read-v { display: block; font-size: 1.9cqi; font-weight: 800; color: #10263b; line-height: 1.1; }
+.wall-read-v { display: block; font-size: 1.8cqi; line-height: 1.15; font-weight: 800; color: #10263b; }
 .wall-read-l {
-  display: block; font-size: 1.05cqi; font-weight: 700; letter-spacing: 0.06em;
+  display: block; font-size: 1cqi; line-height: 1.2; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: #8793a0;
 }
 /* a figure only takes a colour when it is outside the band the yard set */
@@ -1484,3 +1495,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .wall-read.warning .wall-read-v { color: #8a5d00; }
 .wall-read.serious, .wall-read.critical { border-color: #c0392b; background: #fdeceb; }
 .wall-read.serious .wall-read-v, .wall-read.critical .wall-read-v { color: #9c2a1e; }
+
+/* shown on its own, the mock-up takes the room a television would */
+.modal.display { width: min(95vw, 1600px); max-width: none; }
